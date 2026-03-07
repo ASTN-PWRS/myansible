@@ -1,0 +1,9 @@
+- hosts: local
+  become: yes
+  roles:
+    - common
+    - php
+    - nginx
+    - node
+    - cpmposer
+    - slim

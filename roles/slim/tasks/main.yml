@@ -1,0 +1,10 @@
+- name: Create Slim directory
+  file:
+    path: /home/{{ ansible_user }}/projects/slim-app
+    state: directory
+    mode: '0755'
+
+- name: Install Slim via Composer
+  command: composer create-project slim/slim-skeleton /home/{{ ansible_user }}/projects/slim-app
+  args:
+    creates: /home/{{ ansible_user }}/projects/slim-app/vendor

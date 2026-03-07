@@ -1,0 +1,27 @@
+- name: Install PHP-FPM and extensions
+  apt:
+    name:
+      - php-fpm
+      - php-cli
+      - php-mbstring
+      - php-xml
+      - php-curl
+      - php-zip
+      - php-intl
+      - php-opcache
+      - php-redis
+    state: present
+
+- name: Deploy optimized php.ini
+  template:
+    src: php.ini.j2
+    dest: "/etc/php/{{ php_version }}/fpm/php.ini"
+  notify: restart php-fpm
+
+- name: Check if Redis extension is loaded
+  command: php -m
+  register: php_modules
+
+- name: Assert Redis is loaded
+  assert:
+    that: "'redis' in php_modules.stdout"

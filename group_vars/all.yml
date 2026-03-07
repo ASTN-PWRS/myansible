@@ -1,0 +1,9 @@
+slim_project_name: slim-app
+slim_project_root: "{{ ansible_user_dir }}/projects/{{ slim_project_name }}"
+slim_public_root: "{{ slim_project_root }}/public"
+
+nginx_listen_port: 9000
+php_version: "8.3"
+php_fpm_socket: "/run/php/php{{ php_version }}-fpm.sock"
+
+garnet_port: 6379

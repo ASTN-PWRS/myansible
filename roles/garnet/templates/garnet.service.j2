@@ -1,0 +1,12 @@
+[Unit]
+Description=Microsoft Garnet Server
+After=network.target
+
+[Service]
+ExecStart=/opt/garnet/build/GarnetServer --config /etc/garnet/config.json
+WorkingDirectory=/opt/garnet/build
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target

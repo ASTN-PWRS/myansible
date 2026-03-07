@@ -1,0 +1,12 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install base packages
+  apt:
+    name:
+      - git
+      - unzip
+      - curl
+      - software-properties-common
+    state: present
