@@ -1,0 +1,16 @@
+- name: Deploy nginx main reverse proxy (port {{ nginx_entry_port }})
+  template:
+    src: nginx-main.conf.j2
+    dest: /etc/nginx/sites-available/main.conf
+
+- name: Enable main nginx site
+  file:
+    src: /etc/nginx/sites-available/main.conf
+    dest: /etc/nginx/sites-enabled/main.conf
+    state: link
+    force: yes
+
+- name: Reload nginx
+  systemd:
+    name: nginx
+    state: reloaded

@@ -1,0 +1,31 @@
+# 1. Git clone or pull
+- name: Clone or update Express app
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    version: main
+
+# 2. npm install & deploy
+- name: Run deploy for Express app
+  shell: |
+    cd {{ item.dest }}
+    npm install
+    npm run deploy
+  args:
+    executable: /bin/bash
+
+# 3. systemd service
+- name: Deploy Express systemd service
+  template:
+    src: express.service.j2
+    dest: "/etc/systemd/system/{{ item.name }}.service"
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and start Express app
+  systemd:
+    name: "{{ item.name }}"
+    enabled: yes
+    state: restarted

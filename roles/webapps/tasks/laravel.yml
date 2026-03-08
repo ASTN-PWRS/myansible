@@ -1,0 +1,35 @@
+- name: Clone or update Laravel app
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    version: main
+
+- name: Install PHP dependencies with Composer
+  composer:
+    command: install
+    working_dir: "{{ item.dest }}"
+    prefer_dist: yes
+
+- name: Set Laravel permissions
+  file:
+    path: "{{ item.dest }}/storage"
+    state: directory
+    recurse: yes
+    mode: "0777"
+
+- name: Deploy nginx backend reverse proxy for Laravel
+  template:
+    src: php-nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item.name }}.conf"
+
+- name: Enable nginx site for Laravel
+  file:
+    src: "/etc/nginx/sites-available/{{ item.name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ item.name }}.conf"
+    state: link
+    force: yes
+
+- name: Reload nginx
+  systemd:
+    name: nginx
+    state: reloaded

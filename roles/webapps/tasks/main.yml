@@ -1,0 +1,31 @@
+- name: Setup backend apps
+  include_tasks: express.yml
+  when: item.type == "express"
+  loop: "{{ webapps }}"
+
+- name: Setup Slim apps
+  include_tasks: slim.yml
+  when: item.type == "slim"
+  loop: "{{ webapps }}"
+
+- name: Setup Laravel apps
+  include_tasks: laravel.yml
+  when: item.type == "laravel"
+  loop: "{{ webapps }}"
+
+- name: Deploy nginx main reverse proxy (port 9000)
+  template:
+    src: nginx-main.conf.j2
+    dest: /etc/nginx/sites-available/main.conf
+
+- name: Enable main nginx site
+  file:
+    src: /etc/nginx/sites-available/main.conf
+    dest: /etc/nginx/sites-enabled/main.conf
+    state: link
+    force: yes
+
+- name: Reload nginx
+  systemd:
+    name: nginx
+    state: reloaded

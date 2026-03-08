@@ -1,0 +1,13 @@
+server {
+    listen {{ nginx_entry_port }};
+    server_name localhost;
+
+    # IIS → nginx → backend にユーザー名を転送
+    proxy_set_header X-Auth-User $http_x_auth_user;
+
+    {% for app in webapps %}
+    location /n/{{ app.name }}/ {
+        proxy_pass http://127.0.0.1:{{ app.listen_port }}/;
+    }
+    {% endfor %}
+}

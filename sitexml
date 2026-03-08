@@ -1,9 +1,11 @@
 - hosts: local
   become: yes
   roles:
-    - common
-    - php
-    - nginx
-    - node
-    - cpmposer
-    - slim
+    - common # OS 基本設定
+    - php # PHP-FPM + php.ini
+    - nginx # nginx install
+    - node # Node.js / nvm
+    - composer # composer install
+    - nginx-main # 9000番の振り分け
+    - webapp # Express / Slim / Laravel の backend 設定
+    - maintenance # サービス停止・更新
