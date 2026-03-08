@@ -5,13 +5,24 @@ server {
     root {{ item.public }};
     index index.php;
 
+    # セキュリティヘッダ
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    # 静的ファイルは直接返す
     location / {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
+    # PHP-FPM (Slim4)
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:{{ php_fpm_socket }};
         fastcgi_param HTTP_X_AUTH_USER $http_x_auth_user;
+    }
+
+    # セキュリティ: .ht* など禁止
+    location ~ /\.ht {
+        deny all;
     }
 }

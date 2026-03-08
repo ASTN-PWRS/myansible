@@ -1,18 +1,42 @@
+# ============================
+# 1. Git clone / update
+# ============================
 - name: Clone or update Slim app
   git:
     repo: "{{ item.repo }}"
     dest: "{{ item.dest }}"
     version: main
+    force: yes
 
+# ============================
+# 2. Install PHP dependencies
+# ============================
 - name: Install PHP dependencies with Composer
   composer:
     command: install
     working_dir: "{{ item.dest }}"
     prefer_dist: yes
+    optimize_autoloader: yes
+    no_dev: yes
 
+# ============================
+# 3. Ensure public directory permissions
+# ============================
+- name: Ensure Slim public directory permissions
+  file:
+    path: "{{ item.public }}"
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+# ============================
+# 4. Deploy nginx reverse proxy
+# ============================
 - name: Deploy nginx backend reverse proxy for Slim
   template:
-    src: php-nginx.conf.j2
+    src: slim-nginx.conf.j2
     dest: "/etc/nginx/sites-available/{{ item.name }}.conf"
 
 - name: Enable nginx site for Slim
@@ -21,8 +45,3 @@
     dest: "/etc/nginx/sites-enabled/{{ item.name }}.conf"
     state: link
     force: yes
-
-- name: Reload nginx
-  systemd:
-    name: nginx
-    state: reloaded

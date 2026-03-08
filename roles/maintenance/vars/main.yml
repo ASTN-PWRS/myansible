@@ -1,0 +1,3 @@
+uv_cli_tools:
+  - httpie
+  - uvicorn

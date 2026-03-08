@@ -1,0 +1,6 @@
+uv_install_dir: "/opt/uv"
+uv_venv_dir: "/opt/uv/default"
+uv_packages:
+  - wheel
+  - setuptools
+  - requests

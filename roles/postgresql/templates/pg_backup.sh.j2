@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BACKUP_DIR="{{ postgresql_backup_dir }}"
+KEEP_DAYS="{{ postgresql_backup_keep_days }}"
+
+mkdir -p "$BACKUP_DIR"
+
+{% for db in postgresql_backup_databases %}
+DB="{{ db.name }}"
+USER="{{ db.user }}"
+
+FILE="$BACKUP_DIR/${DB}_$(date +%Y%m%d_%H%M%S).sql.gz"
+
+# Backup
+pg_dump -U "$USER" "$DB" | gzip > "$FILE"
+
+{% endfor %}
+
+# Rotation delete
+find "$BACKUP_DIR" -type f -mtime +$KEEP_DAYS -name "*.gz" -delete

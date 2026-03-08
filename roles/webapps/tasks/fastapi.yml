@@ -1,0 +1,48 @@
+# 1. Git clone / update
+- name: Clone or update FastAPI app
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    version: main
+    force: yes
+
+# 2. Python dependencies install (uv pip)
+- name: Install Python dependencies via uv
+  shell: |
+    cd {{ item.dest }}
+    /root/.local/bin/uv pip install --python /opt/uv/default/bin/python -r requirements.txt
+  args:
+    executable: /bin/bash
+  when: item.requirements | default(true)
+
+# 3. Deploy systemd service
+- name: Deploy FastAPI systemd service
+  template:
+    src: uvicorn.service.j2
+    dest: "/etc/systemd/system/{{ item.name }}.service"
+
+# 4. Deploy nginx reverse proxy
+- name: Deploy nginx backend reverse proxy for FastAPI
+  template:
+    src: fastapi-nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item.name }}.conf"
+
+# 5. Enable nginx site
+- name: Enable nginx site for FastAPI
+  file:
+    src: "/etc/nginx/sites-available/{{ item.name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ item.name }}.conf"
+    state: link
+    force: yes
+
+# 6. Reload systemd
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+# 7. Restart FastAPI app
+- name: Restart FastAPI app
+  systemd:
+    name: "{{ item.name }}"
+    enabled: yes
+    state: restarted

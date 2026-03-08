@@ -1,0 +1,91 @@
+---
+# PostgreSQL install + UNIX socket + TCP 両対応 + conf.d テンプレート構成
+
+# -----------------------------
+# Install PostgreSQL
+# -----------------------------
+- name: Add PostgreSQL APT repository
+  ansible.builtin.apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+
+- name: Install PostgreSQL
+  ansible.builtin.apt:
+    name:
+      - postgresql-{{ postgresql_version }}
+      - postgresql-contrib
+    state: present
+    update_cache: yes
+
+# -----------------------------
+# postgresql.conf → conf.d にテンプレート配置
+# -----------------------------
+- name: Deploy PostgreSQL network config (listen_addresses, port)
+  ansible.builtin.template:
+    src: "10-network.conf.j2"
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/10-network.conf"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+
+# -----------------------------
+# pg_hba.conf → テンプレートで完全管理
+# -----------------------------
+- name: Deploy pg_hba.conf
+  ansible.builtin.template:
+    src: "pg_hba.conf.j2"
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+
+# -----------------------------
+# サービス起動
+# -----------------------------
+- name: Enable and restart PostgreSQL
+  ansible.builtin.systemd:
+    name: postgresql
+    enabled: yes
+    state: restarted
+
+# -----------------------------
+# postgres のパスワード設定
+# -----------------------------
+- name: Set postgres user password
+  become: yes
+  become_user: postgres
+  ansible.builtin.command: >
+    psql -c "ALTER USER postgres WITH PASSWORD '{{ postgresql_password }}';"
+
+# -----------------------------
+# 初期 SQL ファイル群をコピー
+# -----------------------------
+- name: Copy initial SQL files
+  ansible.builtin.copy:
+    src: "sql/"
+    dest: "/tmp/sql/"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+
+# -----------------------------
+# 初期 SQL を番号順に実行（初回のみ）
+# -----------------------------
+- name: Run SQL files in order (only once)
+  become: yes
+  become_user: postgres
+  shell: |
+    for f in $(ls /tmp/sql/*.sql | sort); do
+      echo "Executing $f"
+      psql -d {{ postgres_db_name }} -f "$f"
+    done
+  args:
+    creates: "/var/lib/postgresql/.init_sql_done"
+
+# -----------------------------
+# 初期 SQL 実行済みフラグ
+# -----------------------------
+- name: Mark SQL initialization as done
+  ansible.builtin.file:
+    path: "/var/lib/postgresql/.init_sql_done"
+    state: touch

@@ -1,18 +1,15 @@
-- name: Setup backend apps
-  include_tasks: express.yml
-  when: item.type == "express"
+# ============================
+# 1. 各 webapp を type に応じて処理
+# ============================
+- name: Setup all webapps
+  include_tasks: "{{ item.type }}.yml"
   loop: "{{ webapps }}"
+  loop_control:
+    loop_var: item
 
-- name: Setup Slim apps
-  include_tasks: slim.yml
-  when: item.type == "slim"
-  loop: "{{ webapps }}"
-
-- name: Setup Laravel apps
-  include_tasks: laravel.yml
-  when: item.type == "laravel"
-  loop: "{{ webapps }}"
-
+# ============================
+# 2. nginx main reverse proxy
+# ============================
 - name: Deploy nginx main reverse proxy (port 9000)
   template:
     src: nginx-main.conf.j2
@@ -20,11 +17,21 @@
 
 - name: Enable main nginx site
   file:
-    src: /etc/nginx/sites-available/main.conf
-    dest: /etc/nginx/sites-enabled/main.conf
+    src: /etc/nginx/sites-available/main.conf"
+    dest: "/etc/nginx/sites-enabled/main.conf"
     state: link
     force: yes
 
+# ============================
+# 3. systemd reload（全アプリ共通）
+# ============================
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+# ============================
+# 4. nginx reload（全アプリ共通）
+# ============================
 - name: Reload nginx
   systemd:
     name: nginx

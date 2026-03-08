@@ -6,6 +6,8 @@
     - nginx # nginx install
     - node # Node.js / nvm
     - composer # composer install
-    - nginx-main # 9000番の振り分け
+    - python # python + uv
+    - postgresql # PostgreSQL install + config + backup
+    - nginx-main # 9000番の振り分け（reverse proxy）
     - webapp # Express / Slim / Laravel の backend 設定
     - maintenance # サービス停止・更新
