@@ -1,0 +1,24 @@
+---
+- name: Copy initial SQL files
+  copy:
+    src: "sql/"
+    dest: "/tmp/sql/"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+
+- name: Run SQL files in order (only once)
+  become: yes
+  become_user: postgres
+  shell: |
+    for f in $(ls /tmp/sql/*.sql | sort); do
+      echo "Executing $f"
+      psql -d {{ postgres_db_name }} -f "$f"
+    done
+  args:
+    creates: "/var/lib/postgresql/.init_sql_done"
+
+- name: Mark SQL initialization as done
+  file:
+    path: "/var/lib/postgresql/.init_sql_done"
+    state: touch

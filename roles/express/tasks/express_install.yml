@@ -1,0 +1,19 @@
+---
+- name: Clone or update Express app
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    version: main
+    force: yes
+  tags:
+    - express_install
+
+- name: Install Node dependencies (npm install)
+  shell: |
+    cd {{ item.dest }}
+    npm install
+  args:
+    executable: /bin/bash
+    creates: "{{ item.dest }}/node_modules"
+  tags:
+    - express_install

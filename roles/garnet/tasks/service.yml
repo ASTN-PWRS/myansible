@@ -1,0 +1,5 @@
+- name: Enable and start Garnet
+  systemd:
+    name: garnet
+    enabled: yes
+    state: started

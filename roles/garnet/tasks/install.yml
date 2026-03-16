@@ -1,0 +1,39 @@
+- name: Install build dependencies
+  apt:
+    name:
+      - dotnet-sdk-8.0
+      - build-essential
+    state: present
+
+- name: Clone Garnet repository
+  git:
+    repo: "https://github.com/microsoft/garnet.git"
+    dest: "/opt/garnet"
+    version: main
+
+- name: Build Garnet
+  shell: |
+    cd /opt/garnet
+    dotnet publish ./src/GarnetServer/GarnetServer.csproj -c Release -o /opt/garnet/build
+  args:
+    creates: /opt/garnet/build/GarnetServer
+
+- name: Create Garnet config directory
+  file:
+    path: /etc/garnet
+    state: directory
+    mode: "0755"
+
+- name: Deploy Garnet config.json
+  template:
+    src: config.json.j2
+    dest: /etc/garnet/config.json
+
+- name: Deploy systemd service
+  template:
+    src: garnet.service.j2
+    dest: /etc/systemd/system/garnet.service
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes

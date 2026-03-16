@@ -1,8 +1,15 @@
+# Node.js を初回インストール	--tags node
+# Node.js を LTS に更新したい	--tags node_install
+# nvm を再インストールしたい	--tags node_install
+---
 - name: Install nvm
   shell: |
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
   args:
     creates: /home/{{ ansible_user }}/.nvm
+  tags:
+    - node
+    - node_install
 
 - name: Install Node.js LTS
   shell: |
@@ -10,3 +17,6 @@
     nvm install --lts
   args:
     executable: /bin/bash
+  tags:
+    - node
+    - node_install

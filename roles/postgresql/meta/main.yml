@@ -1,0 +1,14 @@
+# ansible-playbook site.yml --tags postgresql_install
+# ansible-playbook site.yml --tags postgresql
+# ansible-playbook site.yml --tags postgresql_password
+
+---
+galaxy_info:
+  author: asao
+  description: PostgreSQL install + config + init
+  min_ansible_version: 2.9
+
+dependencies: []
+
+tags:
+  - postgresql

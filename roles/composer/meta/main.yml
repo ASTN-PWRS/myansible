@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: asao
+  description: Install Composer globally
+  min_ansible_version: 2.9
+
+dependencies: []
+
+tags:
+  - composer

@@ -1,3 +1,15 @@
+# 初回
+# ansible-playbook site.yml --tags php
+# installだけ
+# ansible-playbook site.yml --tags php_install
+# pnp.iniの更新だけ
+# ansible-playbook site.yml --tags php_config
+# php-fpm再起動
+# ansible-playbook site.yml --tags php_service
+# Redis extension のチェックだけ
+# ansible-playbook site.yml --tags php_check
+
+---
 - name: Install PHP-FPM and extensions
   apt:
     name:
@@ -11,17 +23,29 @@
       - php-opcache
       - php-redis
     state: present
+  tags:
+    - php
+    - php_install
 
 - name: Deploy optimized php.ini
   template:
     src: php.ini.j2
     dest: "/etc/php/{{ php_version }}/fpm/php.ini"
   notify: restart php-fpm
+  tags:
+    - php
+    - php_config
 
 - name: Check if Redis extension is loaded
   command: php -m
   register: php_modules
+  tags:
+    - php
+    - php_check
 
 - name: Assert Redis is loaded
   assert:
     that: "'redis' in php_modules.stdout"
+  tags:
+    - php
+    - php_check

@@ -1,0 +1,19 @@
+# 1.初回
+# ansible-playbook site.yml --tags garnet_install,garnet_service
+# 2.configだけ更新して再起動
+# ansible-playbook site.yml --tags garnet_install
+# ansible-playbook site.yml --tags garnet_service
+# 3.再起動
+# ansible-playbook site.yml --tags garnet_service
+# 4.buildだけ
+# ansible-playbook site.yml --tags garnet_install
+---
+galaxy_info:
+  author: asao
+  description: Install and manage Microsoft Garnet server
+  min_ansible_version: 2.9
+
+dependencies: []
+
+tags:
+  - garnet

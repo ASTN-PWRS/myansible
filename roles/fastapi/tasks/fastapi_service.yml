@@ -1,0 +1,9 @@
+---
+# 7. Restart FastAPI app
+- name: Restart FastAPI app
+  systemd:
+    name: "{{ item.name }}"
+    enabled: yes
+    state: restarted
+  tags:
+    - fastapi_service

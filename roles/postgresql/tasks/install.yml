@@ -1,0 +1,13 @@
+---
+- name: Add PostgreSQL APT repository
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql-{{ postgresql_version }}
+      - postgresql-contrib
+    state: present
+    update_cache: yes

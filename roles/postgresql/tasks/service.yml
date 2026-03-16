@@ -1,0 +1,19 @@
+---
+- name: Enable and restart PostgreSQL
+  systemd:
+    name: postgresql
+    enabled: yes
+    state: restarted
+  tags:
+    - postgresql
+    - postgresql_service
+
+- name: Set postgres user password
+  become: yes
+  become_user: postgres
+  command: >
+    psql -c "ALTER USER postgres WITH PASSWORD '{{ postgresql_password }}';"
+  tags:
+    - postgresql
+    - postgresql_password
+    - postgresql_service
