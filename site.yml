@@ -11,5 +11,3 @@
     - nginx-main # 9000番の振り分け（reverse proxy）
     - express # Express
     - fastapi # FastAPI
-    - webapp # Slim / Laravel の backend 設定
-    - maintenance # サービス停止・更新

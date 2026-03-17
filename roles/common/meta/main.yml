@@ -1,9 +1,0 @@
-# roles/common/meta/main.yml
----
-galaxy_info:
-  author: asao
-
-dependencies: []
-
-tags:
-  - common

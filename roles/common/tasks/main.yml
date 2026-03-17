@@ -1,6 +1,8 @@
 - name: Update apt cache
   apt:
     update_cache: yes
+  tags:
+    - common
 
 - name: Install base packages
   apt:
@@ -10,3 +12,5 @@
       - curl
       - software-properties-common
     state: present
+  tags:
+    - common

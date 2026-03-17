@@ -5,3 +5,6 @@
     php -r "unlink('composer-setup.php');"
   args:
     creates: /usr/local/bin/composer
+  tags:
+    - composer
+    - composer_install
