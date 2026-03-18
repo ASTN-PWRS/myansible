@@ -3,7 +3,7 @@
   tags:
     - postgresql
     - postgresql_install
-
+    - install
 - include_tasks: config.yml
   tags:
     - postgresql

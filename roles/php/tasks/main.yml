@@ -26,7 +26,7 @@
   tags:
     - php
     - php_install
-
+    - install
 - name: Deploy optimized php.ini
   template:
     src: php.ini.j2

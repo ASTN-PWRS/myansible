@@ -24,6 +24,7 @@
   tags:
     - python
     - python_install
+    - install
 
 # ============================
 # 2. uv のインストール
@@ -35,6 +36,7 @@
   tags:
     - python
     - python_install
+    - install
 
 - name: Add uv to PATH
   copy:
@@ -61,6 +63,7 @@
   tags:
     - python
     - python_install
+    - install
 
 - name: Create global uv venv
   command: >
@@ -70,6 +73,7 @@
   tags:
     - python
     - python_install
+    - install
 
 # ============================
 # 4. uv pip でパッケージをインストール
@@ -81,3 +85,4 @@
   tags:
     - python
     - python_packages
+    - install

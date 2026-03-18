@@ -8,6 +8,7 @@
     - composer # composer install
     - python # python + uv
     - postgresql # PostgreSQL install + config + backup
+    - garnet # Garnet
     - nginx-main # 9000番の振り分け（reverse proxy）
     - express # Express
     - fastapi # FastAPI

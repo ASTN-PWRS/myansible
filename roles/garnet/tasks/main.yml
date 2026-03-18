@@ -3,6 +3,7 @@
   tags:
     - garnet
     - garnet_install
+    - install
 
 - include_tasks: service.yml
   tags:
