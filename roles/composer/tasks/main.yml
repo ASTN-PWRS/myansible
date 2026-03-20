@@ -9,3 +9,9 @@
     - composer
     - composer_install
     - install
+- name: Upgrade Composer to latest version
+  shell: composer self-update
+  tags:
+    - composer
+    - composer_upgrade
+    - upgrade

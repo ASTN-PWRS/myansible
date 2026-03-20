@@ -1,8 +1,11 @@
+# roles/common/tasks/main.yml
+---
 - name: Update apt cache
   apt:
     update_cache: yes
   tags:
     - common
+    - update
 
 - name: Install base packages
   apt:
@@ -11,7 +14,14 @@
       - unzip
       - curl
       - software-properties-common
-    state: present
+    state: present   # or latest（後述）
   tags:
     - common
     - install
+
+- name: Upgrade installed packages
+  apt:
+    upgrade: dist
+  tags:
+    - common
+    - upgrade
