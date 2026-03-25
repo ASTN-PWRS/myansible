@@ -1,0 +1,13 @@
+# PostgreSQL main configuration overrides
+
+# 推奨：SCRAM 認証
+password_encryption = scram-sha-256
+
+# ログ設定（必要なら）
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-%Y-%m-%d.log'
+
+# パフォーマンス調整（任意）
+shared_buffers = 256MB
+work_mem = 16MB

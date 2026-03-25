@@ -2,7 +2,7 @@
 nginx_listen_port: 9000
 # php
 php_version: "8.3"
-php_fpm_socket: "/run/php/php{{ php_version }}-fpm.sock"
+php_fpm_socket: "/run/php/php-fpm.sock"
 # garnet
 garnet_port: 6379
 # PostgreSQL
