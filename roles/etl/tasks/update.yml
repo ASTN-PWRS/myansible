@@ -1,0 +1,24 @@
+# スクリプト更新 + 依存更新
+---
+- name: Update ETL libs
+  copy:
+    src: libs/
+    dest: /opt/etl/libs/
+    mode: "0644"
+
+- name: Update ETL Python script
+  template:
+    src: main.py.j2
+    dest: /opt/etl/main.py
+    mode: "0755"
+
+- name: Update ETL config
+  template:
+    src: config.yaml.j2
+    dest: /opt/etl/config.yaml
+    mode: "0644"
+
+- name: Update Python dependencies
+  command: uv pip install -r /opt/etl/requirements.txt
+  args:
+    chdir: /opt/etl

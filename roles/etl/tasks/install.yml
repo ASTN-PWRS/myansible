@@ -1,0 +1,56 @@
+# 初回install
+---
+- name: Create ETL directory
+  file:
+    path: /opt/etl
+    state: directory
+    mode: "0755"
+
+- name: Create libs directory
+  file:
+    path: /opt/etl/libs
+    state: directory
+    mode: "0755"
+
+- name: Copy ETL libs
+  copy:
+    src: libs/
+    dest: /opt/etl/libs/
+    mode: "0644"
+
+- name: Deploy ETL Python script
+  template:
+    src: main.py.j2
+    dest: /opt/etl/main.py
+    mode: "0755"
+
+- name: Deploy ETL config
+  template:
+    src: config.yaml.j2
+    dest: /opt/etl/config.yaml
+    mode: "0644"
+
+- name: Deploy requirements.txt
+  copy:
+    src: requirements.txt
+    dest: /opt/etl/requirements.txt
+    mode: "0644"
+
+- name: Install Python dependencies with uv
+  command: uv pip install -r /opt/etl/requirements.txt
+  args:
+    chdir: /opt/etl
+
+- name: Deploy systemd service
+  template:
+    src: etl.service.j2
+    dest: /etc/systemd/system/etl.service
+
+- name: Deploy systemd timer
+  template:
+    src: etl.timer.j2
+    dest: /etc/systemd/system/etl.timer
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true

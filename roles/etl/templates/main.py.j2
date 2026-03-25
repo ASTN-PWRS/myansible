@@ -1,0 +1,27 @@
+import pandas as pd
+import psycopg
+import yaml
+
+config = yaml.safe_load(open("config.yaml"))
+
+conn_info = f"dbname={config['db']} user={config['user']} password={config['password']} host={config['host']}"
+
+df = pd.read_csv(config["csv_path"])
+records = df.to_dict(orient="records")
+
+upsert_sql = """
+INSERT INTO users (id, name, email, updated_at)
+VALUES (%(id)s, %(name)s, %(email)s, NOW())
+ON CONFLICT (id)
+DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    updated_at = NOW();
+"""
+
+with psycopg.connect(conn_info) as conn:
+    with conn.cursor() as cur:
+        cur.executemany(upsert_sql, records)
+    conn.commit()
+
+print(f"Upserted {len(records)} users.")

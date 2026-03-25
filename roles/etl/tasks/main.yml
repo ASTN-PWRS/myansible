@@ -1,0 +1,20 @@
+---
+- import_tasks: install.yml
+  tags:
+    - etl
+    - etl_install
+
+- import_tasks: update.yml
+  tags:
+    - etl
+    - etl_update
+
+- import_tasks: start.yml
+  tags:
+    - etl
+    - etl_start
+
+- import_tasks: stop.yml
+  tags:
+    - etl
+    - etl_stop

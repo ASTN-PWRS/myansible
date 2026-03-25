@@ -1,0 +1,7 @@
+# サービス起動
+---
+- name: Enable and start ETL timer
+  systemd:
+    name: etl.timer
+    enabled: true
+    state: started
