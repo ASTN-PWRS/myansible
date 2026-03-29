@@ -14,7 +14,8 @@
   tags:
     - postgresql
     - postgresql_password
-    - postgresql_service
+    - postgresql_start
+    - start
 
 - name: Verify PostgreSQL is active
   systemd:
@@ -26,4 +27,5 @@
     - postgresql
     - postgresql_verify
     - verify
-    - postgresql_service
+    - postgresql_start
+    - start

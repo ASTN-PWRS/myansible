@@ -3,6 +3,11 @@
     name: garnet
     enabled: yes
     state: started
+  tags:
+    - garnet
+    - garnet_start
+    - start
+
 - name: Enable and start Garnet
   systemd:
     name: garnet
@@ -10,8 +15,8 @@
     state: started
   tags:
     - garnet
-    - garnet_service
-    - service
+    - garnet_start
+    - start
 
 - name: Verify Garnet is running
   systemd:
@@ -20,5 +25,5 @@
   failed_when: garnet_status.status.ActiveState != "active"
   tags:
     - garnet
-    - garnet_service
-    - service
+    - garnet_start
+    - start

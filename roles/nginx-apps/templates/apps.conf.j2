@@ -1,0 +1,45 @@
+{% for app in nginx_apps %}
+
+{% set path = app.path.rstrip('/') %}
+
+{% if app.type == 'php' %}
+location {{ path }}/ {
+    alias {{ app.root }}/;
+    index index.php;
+
+    # alias のときは fallback を URI ベースにする
+    try_files $uri $uri/ {{ path }}/index.php?$query_string;
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:{{ php_fpm_socket }};
+
+        # alias のときはこれが最強
+        fastcgi_param SCRIPT_FILENAME $request_filename;
+    }
+}
+{% endif %}
+
+{% if app.type == 'static' %}
+location {{ path }}/ {
+    alias {{ app.root }}/;
+    try_files $uri $uri/ =404;
+}
+{% endif %}
+
+{% if app.type == 'proxy' %}
+location {{ path }}/ {
+
+    rewrite ^{{ path }}/?(.*)$ /$1 break;
+
+    proxy_pass {{ app.target.rstrip('/') }}/;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_redirect off;
+}
+{% endif %}
+
+{% endfor %}

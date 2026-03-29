@@ -12,7 +12,8 @@
 - include_tasks: service.yml
   tags:
     - postgresql
-    - postgresql_service
+    - postgresql_start
+    - start
 
 - include_tasks: init.yml
   tags:

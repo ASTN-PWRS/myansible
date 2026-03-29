@@ -51,3 +51,31 @@
     - postgresql
     - postgresql_install
     - install
+
+# ============================
+# Install PostgreSQL config
+# ============================
+
+- name: Deploy PostgreSQL network config
+  template:
+    src: "10-network.conf.j2"
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/10-network.conf"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  tags:
+    - postgresql
+    - postgresql_install
+    - install
+
+- name: Deploy pg_hba.conf
+  template:
+    src: "pg_hba.conf.j2"
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  tags:
+    - postgresql
+    - postgresql_install
+    - install

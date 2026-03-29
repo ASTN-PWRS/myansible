@@ -14,11 +14,3 @@
     owner: postgres
     group: postgres
     mode: "0640"
-
-- name: Deploy PostgreSQL main config (password_encryption, etc.)
-  template:
-    src: "20-main.conf.j2"
-    dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/20-main.conf"
-    owner: postgres
-    group: postgres
-    mode: "0644"

@@ -1,17 +1,21 @@
 ---
-- name: Update apt cache
-  apt:
-    update_cache: yes
+- name: Install Nginx
+  import_tasks: install.yml
   tags:
     - nginx
     - nginx_install
     - install
 
-- name: Install nginx
-  apt:
-    name: nginx
-    state: present
+- name: Configure Nginx sites
+  import_tasks: config.yml
   tags:
     - nginx
-    - nginx_install
-    - install
+    - nginx_config
+    - config
+
+- name: Manage Nginx service
+  import_tasks: service.yml
+  tags:
+    - nginx
+    - nginx_service
+    - service

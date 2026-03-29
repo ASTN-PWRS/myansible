@@ -8,4 +8,5 @@
 - include_tasks: service.yml
   tags:
     - garnet
-    - garnet_service
+    - garnet_start
+    - start

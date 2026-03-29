@@ -1,0 +1,10 @@
+server {
+    listen {{ nginx_listen_port }};
+    server_name localhost;
+
+    root /var/www/html;
+    index index.html index.php;
+
+    # nginx-apps ロールが生成する apps.conf を include
+    include /etc/nginx/snippets/apps.conf;
+}

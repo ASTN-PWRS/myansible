@@ -1,3 +1,14 @@
+# 初回
+# ansible-playbook site.yml --tags php
+# installだけ
+# ansible-playbook site.yml --tags php_install
+# pnp.iniの更新だけ
+# ansible-playbook site.yml --tags php_config
+# php-fpm再起動
+# ansible-playbook site.yml --tags php_service
+# Redis extension のチェックだけ
+# ansible-playbook site.yml --tags php_check
+
 ---
 - name: Install PHP-FPM and extensions
   apt:
@@ -16,7 +27,6 @@
     - php
     - php_install
     - install
-
 - name: Deploy optimized php.ini
   template:
     src: php.ini.j2
@@ -24,7 +34,9 @@
   notify: restart php-fpm
   tags:
     - php
+    - php_install
     - php_config
+    - install
 
 - name: Check if Redis extension is loaded
   command: php -m
@@ -32,6 +44,9 @@
   tags:
     - php
     - php_check
+    - php_install
+    - php_config
+    - install
 
 - name: Assert Redis is loaded
   assert:
@@ -39,29 +54,6 @@
   tags:
     - php
     - php_check
-
-# 🔥 ここから追加：php-fpm のサービス名を自動判定して起動
-
-- name: Check if versioned php-fpm service exists
-  stat:
-    path: "/lib/systemd/system/php{{ php_version }}-fpm.service"
-  register: php_fpm_versioned
-  tags:
-    - php
-    - php_service
-
-- name: Set php-fpm service name
-  set_fact:
-    php_fpm_service: "{{ 'php' + php_version + '-fpm' if php_fpm_versioned.stat.exists else 'php-fpm' }}"
-  tags:
-    - php
-    - php_service
-
-- name: Ensure php-fpm is started and enabled
-  service:
-    name: "{{ php_fpm_service }}"
-    state: started
-    enabled: yes
-  tags:
-    - php
-    - php_service
+    - php_install
+    - php_config
+    - install

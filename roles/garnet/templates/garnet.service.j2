@@ -3,7 +3,7 @@ Description=Microsoft Garnet Server
 After=network.target
 
 [Service]
-ExecStart=/opt/garnet/build/GarnetServer --config /etc/garnet/config.json
+ExecStart=/opt/garnet/build/GarnetServer --config-import-path /etc/garnet/config.json
 WorkingDirectory=/opt/garnet/build
 Restart=always
 User=root

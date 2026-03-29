@@ -1,0 +1,9 @@
+---
+- name: Reload Nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  tags:
+    - nginx
+    - nginx_install
+    - service
