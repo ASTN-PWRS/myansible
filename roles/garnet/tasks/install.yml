@@ -1,68 +1,77 @@
----
-- name: Install .NET SDK 10
+- name: Download Microsoft package repository
+  get_url:
+    url: https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
+    dest: /tmp/packages-microsoft-prod.deb
+    mode: "0644"
+  tags: [garnet, garnet_install, install]
+
+- name: Install Microsoft package repository
   apt:
-    name:
-      - dotnet-sdk-10.0
+    deb: /tmp/packages-microsoft-prod.deb
+  tags: [garnet, garnet_install, install]
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  tags: [garnet, garnet_install, install]
+
+- name: Install .NET 10 SDK
+  apt:
+    name: dotnet-sdk-10.0
     state: present
     update_cache: yes
-  tags:
-    - garnet
-    - garnet_install
-    - install
+  tags: [garnet, garnet_install, install]
 
-- name: Clone Garnet repository
+# ★ 安定版に変更
+- name: Clone Garnet repository (stable tag)
   git:
     repo: "https://github.com/microsoft/garnet.git"
     dest: "/opt/garnet"
-    version: main
-  tags:
-    - garnet
-    - garnet_install
-    - install
+    version: "v1.1.1"
+    force: yes
+  tags: [garnet, garnet_install, install]
 
-- name: Build Garnet
+# ★ 権限問題対策（これ入れないとまた死ぬ）
+- name: Fix permissions for garnet directory
+  file:
+    path: /opt/garnet
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    recurse: yes
+  tags: [garnet, garnet_install, install]
+
+- name: Build Garnet (stable)
   shell: |
     cd /opt/garnet
-    dotnet publish ./main/GarnetServer/GarnetServer.csproj -c Release -f net10.0 -o /opt/garnet/build
+    dotnet restore ./main/GarnetServer/GarnetServer.csproj
+    dotnet publish ./main/GarnetServer/GarnetServer.csproj \
+      -c Release \
+      -f net8.0 \
+      -o /opt/garnet/build
   args:
     creates: /opt/garnet/build/GarnetServer
-  tags:
-    - garnet
-    - garnet_install
-    - install
+  tags: [garnet, garnet_install, install]
 
 - name: Create Garnet config directory
   file:
     path: /etc/garnet
     state: directory
     mode: "0755"
-  tags:
-    - garnet
-    - garnet_install
-    - install
+  tags: [garnet, garnet_install, install]
 
 - name: Deploy Garnet config.json
   template:
     src: config.json.j2
     dest: /etc/garnet/config.json
-  tags:
-    - garnet
-    - garnet_install
-    - install
+  tags: [garnet, garnet_install, install]
 
 - name: Deploy systemd service
   template:
     src: garnet.service.j2
     dest: /etc/systemd/system/garnet.service
-  tags:
-    - garnet
-    - garnet_install
-    - install
+  tags: [garnet, garnet_install, install]
 
 - name: Reload systemd
   systemd:
     daemon_reload: yes
-  tags:
-    - garnet
-    - garnet_install
-    - install
+  tags: [garnet, garnet_install, install]
