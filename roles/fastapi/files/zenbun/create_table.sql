@@ -1,5 +1,3 @@
-DROP TABLE IF EXISTS ocr_documents;
-
 CREATE TABLE ocr_documents (
     id          SERIAL PRIMARY KEY,
     filename    TEXT NOT NULL,
@@ -10,3 +8,6 @@ CREATE TABLE ocr_documents (
     ) STORED,
     created_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_ocr_text_tsv
+    ON ocr_documents USING GIN (text_tsv);

@@ -1,13 +1,3 @@
-# FastAPI のコードだけ更新（git pull + uv pip install）
-# ansible-playbook site.yml --tags fastapi_install
-# systemd / nginx の設定だけ更新
-# ansible-playbook site.yml --tags fastapi_config
-# ansible-playbook site.yml --tags fastapi_service
-# FastAPI再起動
-# ansible-playbook site.yml --tags fastapi_service
-# 全体
-# ansible-playbook site.yml --tags fastapi
-
 ---
 - include_tasks: fastapi_install.yml
   tags:

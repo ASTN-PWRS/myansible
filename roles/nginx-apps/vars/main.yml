@@ -15,6 +15,6 @@ nginx_apps:
   #   type: proxy
   #   target: http://localhost:3000/
 
-  # - path: /fastapi/
-  #   type: proxy
-  #   target: http://localhost:8000/
+  - path: /fastapi/
+    type: proxy
+    target: http://localhost:8000/
