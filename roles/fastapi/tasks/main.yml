@@ -1,18 +1,16 @@
 ---
-- include_tasks: fastapi_install.yml
-  tags:
-    - webapp
-    - fastapi
-    - fastapi_install
+- name: Install FastAPI app
+  ansible.builtin.include_tasks: install.yml
+  tags: [install]
 
-- include_tasks: fastapi_config.yml
-  tags:
-    - webapp
-    - fastapi
-    - fastapi_config
+- name: Update FastAPI app
+  ansible.builtin.include_tasks: update.yml
+  tags: [update]
 
-- include_tasks: fastapi_service.yml
-  tags:
-    - webapp
-    - fastapi
-    - fastapi_service
+- name: Start FastAPI app
+  ansible.builtin.include_tasks: start.yml
+  tags: [start]
+
+- name: Stop FastAPI app
+  ansible.builtin.include_tasks: stop.yml
+  tags: [stop]

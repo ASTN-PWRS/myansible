@@ -10,8 +10,9 @@
 
 - name: Ensure app directory is accessible
   ansible.builtin.file:
-    path: "{{ app.root | dirname }}"
-    mode: "0755"
+    path: "{{ item.root | dirname }}"
+    state: directory
+    mode: "0711"
 
 - name: Ensure app public directory is accessible
   ansible.builtin.file:

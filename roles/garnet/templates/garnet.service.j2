@@ -3,10 +3,13 @@ Description=Microsoft Garnet Server
 After=network.target
 
 [Service]
-ExecStart=/opt/garnet/build/GarnetServer --config-import-path /etc/garnet/config.json
-WorkingDirectory=/opt/garnet/build
-Restart=always
+Type=simple
 User=root
+Group=root
+WorkingDirectory=/opt/garnet
+ExecStart=/opt/garnet/build/GarnetServer --config-import-path /etc/garnet/config.json
+Restart=always
+RestartSec=2
 
 [Install]
 WantedBy=multi-user.target

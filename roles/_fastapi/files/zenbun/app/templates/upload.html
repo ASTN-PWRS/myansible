@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PDF OCR アップロード</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 40px;
+      }
+      .drop-zone {
+        border: 2px dashed #888;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        color: #555;
+        cursor: pointer;
+      }
+      .drop-zone.dragover {
+        border-color: #007bff;
+        background: #f0f8ff;
+        color: #007bff;
+      }
+      #result {
+        margin-top: 24px;
+        white-space: pre-wrap;
+        font-size: 14px;
+        border-top: 1px solid #ddd;
+        padding-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PDF OCR アップロード</h1>
+
+    <div id="drop-zone" class="drop-zone">
+      ここに PDF をドラッグ＆ドロップ<br />
+      またはクリックして選択
+      <input
+        id="file-input"
+        type="file"
+        accept="application/pdf"
+        style="display: none"
+      />
+    </div>
+
+    <div id="status"></div>
+    <div id="result"></div>
+
+    <script>
+      const dropZone = document.getElementById("drop-zone");
+      const fileInput = document.getElementById("file-input");
+      const statusEl = document.getElementById("status");
+      const resultEl = document.getElementById("result");
+
+      dropZone.addEventListener("click", () => fileInput.click());
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+      });
+
+      dropZone.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          uploadFile(file);
+        }
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          uploadFile(file);
+        }
+      });
+
+      async function uploadFile(file) {
+        if (file.type !== "application/pdf") {
+          alert("PDF ファイルを選択してください");
+          return;
+        }
+
+        statusEl.textContent = "アップロード中 & OCR 実行中...";
+        resultEl.textContent = "";
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const res = await fetch("/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!res.ok) {
+            throw new Error("アップロードに失敗しました");
+          }
+
+          const data = await res.json();
+          statusEl.textContent = `完了: ${data.filename}`;
+          let text = "";
+          for (const page of data.pages) {
+            text += `--- page ${page.page} ---\n`;
+            text += page.text + "\n\n";
+          }
+          resultEl.textContent = text;
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "エラーが発生しました";
+        }
+      }
+    </script>
+  </body>
+</html>

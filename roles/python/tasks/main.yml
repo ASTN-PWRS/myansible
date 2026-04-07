@@ -86,3 +86,14 @@
     - python
     - python_packages
     - install
+
+- name: Add uv to global PATH
+  ansible.builtin.copy:
+    dest: /etc/profile.d/uv.sh
+    mode: "0755"
+    content: |
+      export PATH="/root/.local/bin:$PATH"
+  tags:
+    - uv
+    - uv_install
+    - install
