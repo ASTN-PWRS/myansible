@@ -35,6 +35,18 @@
     - php_config
     - install
 
+- name: Start php-fpm and fail if it does not start
+  systemd:
+    name: php8.3-fpm
+    state: started
+  register: php_fpm_result
+  failed_when: php_fpm_result.status.ActiveState != "active"
+  changed_when: false
+  tags:
+    - php
+    - php_install
+    - install
+
 - name: Check if Redis extension is loaded
   ansible.builtin.command: php -m
   register: php_modules

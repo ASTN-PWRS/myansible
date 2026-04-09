@@ -3,4 +3,3 @@
   ansible.builtin.import_tasks: config.yml
   tags:
     - nginx
-    - install

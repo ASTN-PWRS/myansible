@@ -1,27 +1,107 @@
-# roles/common/tasks/main.yml
----
+# ------------------------------------------------------------
+# 1. apt update
+# ------------------------------------------------------------
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: yes
-  tags:
-    - common
-    - update
+    cache_valid_time: 3600
+  become: true
+  tags: [common, update]
 
+# ------------------------------------------------------------
+# 2. base packages
+# ------------------------------------------------------------
 - name: Install base packages
-  apt:
+  ansible.builtin.apt:
     name:
       - git
       - unzip
       - curl
       - software-properties-common
-    state: present   # or latest（後述）
-  tags:
-    - common
-    - install
+    state: present
+  become: true
+  tags: [common, install]
 
+# ------------------------------------------------------------
+# 3. upgrade
+# ------------------------------------------------------------
 - name: Upgrade installed packages
-  apt:
+  ansible.builtin.apt:
     upgrade: dist
-  tags:
-    - common
-    - upgrade
+    autoremove: yes
+  become: true
+  tags: [common, upgrade]
+
+# ------------------------------------------------------------
+# 4. package_facts（必須）
+# ------------------------------------------------------------
+- name: Gather package facts
+  ansible.builtin.package_facts:
+  tags: [install, optimize]
+
+# ------------------------------------------------------------
+# 5. landscape-client（存在チェック付き）
+# ------------------------------------------------------------
+- name: Disable landscape-client service if installed
+  ansible.builtin.systemd:
+    name: landscape-client
+    enabled: false
+    state: stopped
+  when:
+    - ansible_facts.service_mgr == "systemd"
+    - "'landscape-client' in ansible_facts.packages"
+  become: true
+  ignore_errors: true
+  tags: [install, optimize]
+
+- name: Remove landscape-client package if installed
+  ansible.builtin.apt:
+    name: landscape-client
+    state: absent
+    purge: true
+    autoremove: true
+  when: "'landscape-client' in ansible_facts.packages"
+  become: true
+  tags: [install, optimize]
+
+# ------------------------------------------------------------
+# 6. service_facts（必須）
+# ------------------------------------------------------------
+- name: Gather service facts
+  ansible.builtin.service_facts:
+  when: ansible_facts.service_mgr == "systemd"
+  tags: [install, optimize]
+
+# ------------------------------------------------------------
+# 7. 不要サービス disable（存在チェック付き）
+# ------------------------------------------------------------
+- name: Disable unnecessary services for WSL (safe)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - snapd
+    - snapd.socket
+    - ModemManager
+    - bluetooth
+  when:
+    - ansible_facts.service_mgr == "systemd"
+    - item in ansible_facts.services
+      or item + ".service" in ansible_facts.services
+  ignore_errors: true
+  tags: [install, optimize]
+
+# ------------------------------------------------------------
+# 8. networkd-wait-online（存在チェック付き）
+# ------------------------------------------------------------
+- name: Disable and stop systemd-networkd-wait-online (safe)
+  ansible.builtin.systemd:
+    name: systemd-networkd-wait-online.service
+    enabled: false
+    state: stopped
+  become: true
+  when:
+    - ansible_facts.service_mgr == "systemd"
+    - "'systemd-networkd-wait-online.service' in ansible_facts.services"
+  tags: [install, optimize]

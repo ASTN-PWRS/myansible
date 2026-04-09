@@ -1,0 +1,6 @@
+- hosts: local
+  become: yes
+  roles:
+    - nginx-apps # 9000番の振り分け（reverse proxy）
+    - express # Express
+    - fastapi # FastAPI

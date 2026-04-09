@@ -1,0 +1,20 @@
+---
+- name: Include DB initialization tasks
+  ansible.builtin.include_tasks: db.yml
+  tags:
+    - install
+
+- name: Include ETL execution tasks
+  ansible.builtin.include_tasks: etl_python.yml
+  tags:
+    - install
+
+- name: Include project env deployment tasks
+  ansible.builtin.include_tasks: env.yml
+  tags:
+    - install
+
+- name: Include nginx reverse proxy tasks
+  ansible.builtin.include_tasks: nginx.yml
+  tags:
+    - install

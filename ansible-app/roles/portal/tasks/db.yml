@@ -1,0 +1,23 @@
+# Databaseとテーブル作成
+---
+- name: Ensure temp directory for SQL exists
+  ansible.builtin.file:
+    path: "/tmp/{{ database_name }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy SQL migration files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/tmp/{{ database_name }}/"
+    mode: "0644"
+  with_fileglob:
+    - "files/{{ database_name }}/000_*.sql"
+
+- name: Execute SQL migrations
+  ansible.builtin.command: >
+    psql -U postgres -d {{ database_name }} -f {{ item }}
+  args:
+    chdir: "/tmp/{{ database_name }}"
+  with_fileglob:
+    - "/tmp/{{ database_name }}/000_*.sql"

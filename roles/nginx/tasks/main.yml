@@ -11,11 +11,11 @@
   tags:
     - nginx
     - nginx_config
-    - config
+    - install
 
 - name: Manage Nginx service
   import_tasks: service.yml
   tags:
     - nginx
     - nginx_service
-    - service
+    - install

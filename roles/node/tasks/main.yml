@@ -1,35 +1,29 @@
----
 - name: Install nvm
+  become: false
   shell: |
-    if [ ! -d "/home/{{ ansible_user }}/.nvm" ]; then
+    export HOME="/home/{{ ansible_user }}"
+    export NVM_DIR="$HOME/.nvm"
+    if [ ! -d "$NVM_DIR" ]; then
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
     fi
-  become: false
-  tags:
-    - node
-    - node_install
-    - install
+  args:
+    chdir: "/home/{{ ansible_user }}"
+    executable: /bin/bash
 
 - name: Load nvm and install Node.js LTS
+  become: false
   shell: |
-    export NVM_DIR="/home/{{ ansible_user }}/.nvm"
+    export HOME="/home/{{ ansible_user }}"
+    export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm install --lts
   args:
+    chdir: "/home/{{ ansible_user }}"
     executable: /bin/bash
-  become: false
-  tags:
-    - node
-    - node_install
-    - install
 
 - name: Add nvm init to .bashrc
+  become: false
   lineinfile:
     path: "/home/{{ ansible_user }}/.bashrc"
     line: 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
     insertafter: EOF
-  become: false
-  tags:
-    - node
-    - node_install
-    - install

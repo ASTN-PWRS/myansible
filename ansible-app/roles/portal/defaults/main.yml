@@ -1,0 +1,5 @@
+# roles/etl/defaults/main.yml
+database_name: defaultdb
+app_name: portal
+project_name: portal
+sql_migrations: []
