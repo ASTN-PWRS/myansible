@@ -1,0 +1,9 @@
+fastapi
+jinja2
+uvicorn[standard]
+opencv-python-headless
+paddleocr
+paddlepaddle
+pdf2image
+psycopg[binary]
+python-multipart

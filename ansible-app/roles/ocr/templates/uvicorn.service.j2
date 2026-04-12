@@ -1,0 +1,23 @@
+[Unit]
+Description=Uvicorn {{ app_name }} service
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/opt/{{ app_name }}
+
+# uv run を使わず、venv の python -m uvicorn を使う
+ExecStart=/opt/ocr/venv/bin/python -m uvicorn main:app \
+  --host 0.0.0.0 \
+  --port {{ app_port | default(8000) }} \
+  --workers 2
+
+Restart=always
+RestartSec=3
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

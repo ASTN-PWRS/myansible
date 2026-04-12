@@ -1,0 +1,14 @@
+# defaults/main.yml
+app_name: ocr
+api: /ocr
+type: uvicorn
+path: /home/{{ ansible_user}}/projects/ocr
+app_port: 4000
+fastapi_user: ubuntu
+fastapi_local_src: "/home/{{ansible_user}}/projects/ocr"
+fastapi_app_dir: "/opt/ocr"
+fastapi_service_name: ocr
+fastapi_module: app.main
+fastapi_callable: app
+fastapi_port: 8000
+fastapi_workers: 4

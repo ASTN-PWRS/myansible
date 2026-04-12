@@ -1,7 +1,0 @@
-# サービス停止
----
-- name: Stop ETL timer
-  systemd:
-    name: etl.timer
-    enabled: false
-    state: stopped

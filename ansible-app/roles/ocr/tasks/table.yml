@@ -1,0 +1,63 @@
+---
+# =========================
+# ローカルのSQLディレクトリ取得
+# =========================
+- name: Find application directories under files/sql (local)
+  find:
+    paths: "{{ playbook_dir }}/roles/ocr/files/sql"
+    file_type: directory
+    depth: 1
+  register: sql_dirs
+  delegate_to: localhost
+  run_once: true
+  tags: [sql, install]
+
+# =========================
+# /tmp/sql 作成
+# =========================
+- name: Create base tmp sql dir
+  file:
+    path: /tmp/sql
+    state: directory
+    mode: "0755"
+  tags: [sql, install]
+
+# =========================
+# SQLディレクトリを丸ごとコピー（重要）
+# =========================
+- name: Copy SQL directories to remote
+  copy:
+    src: "{{ item.path }}/"
+    dest: "/tmp/sql/{{ item.path | basename }}/"
+    mode: "0644"
+  loop: "{{ sql_dirs.files }}"
+  tags: [sql, install]
+
+# =========================
+# DBが無ければ作成
+# =========================
+- name: Ensure database exists
+  shell: |
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='{{ item.path | basename }}'" | grep -q 1 \
+    || sudo -u postgres createdb {{ item.path | basename }}
+  args:
+    executable: /bin/bash
+  loop: "{{ sql_dirs.files }}"
+  changed_when: false
+  tags: [sql, install]
+
+# =========================
+# SQL実行（順序保証）
+# =========================
+- name: Execute SQL migrations
+  shell: |
+    for f in /tmp/sql/{{ item.path | basename }}/*.sql; do
+      if [ -f "$f" ]; then
+        echo "Running $f"
+        sudo -u postgres psql -d "{{ item.path | basename }}" -f "$f"
+      fi
+    done
+  args:
+    executable: /bin/bash
+  loop: "{{ sql_dirs.files }}"
+  tags: [sql, install]

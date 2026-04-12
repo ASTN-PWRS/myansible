@@ -1,0 +1,50 @@
+# -----------------------------------------------------------------------------
+# ETL Task Structure
+#
+# Folder layout:
+#   files/
+#     python/
+#       {{ app_name }}/
+#         main.py
+#         requirements.txt
+#         (other ETL modules...)
+#
+# Runtime staging:
+#   /opt/{{ app_name }}/
+#     ← Copy ETL app here temporarily
+#     ← uv pip install -r requirements.txt
+#     ← uv run main.py
+#     ← Remove after successful execution
+#
+# Flow:
+#   1. Copy ETL app to /opt
+#   2. Install dependencies via uv
+#   3. Execute ETL with uv run
+#   4. Remove /opt/{{ app_name }} if ETL succeeded
+# -----------------------------------------------------------------------------
+---
+- name: Copy ETL python application
+  ansible.builtin.copy:
+    src: "files/python/{{ app_name }}/"
+    dest: "/opt/{{ app_name }}/"
+    mode: "0755"
+
+- name: Install ETL python dependencies via uv
+  ansible.builtin.command: >
+    uv pip install -r /opt/{{ app_name }}/requirements.txt
+  args:
+    chdir: "/opt/{{ app_name }}"
+
+- name: Run ETL python program using uv
+  ansible.builtin.command: >
+    uv run /opt/{{ app_name }}/main.py
+  args:
+    chdir: "/opt/{{ app_name }}"
+  register: etl_result
+  failed_when: etl_result.rc != 0
+
+- name: Remove ETL application directory after success
+  ansible.builtin.file:
+    path: "/opt/{{ app_name }}"
+    state: absent
+  when: etl_result.rc == 0

@@ -1,0 +1,70 @@
+---
+- name: Ensure OCR venv exists
+  command: "/root/.local/bin/uv venv /opt/ocr/venv"
+  args:
+    creates: "/opt/ocr/venv/bin/python"
+  tags: [app, install]
+
+- name: Ensure app directory exists
+  file:
+    path: "/opt/{{ app_name }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags: [app, install]
+
+- name: Check if application path exists on controller
+  stat:
+    path: "{{ path }}"
+  register: app_src
+  tags: [app, install]
+
+- name: Copy application files to /opt/{{ app_name }}
+  copy:
+    src: "{{ path }}/"
+    dest: "/opt/{{ app_name }}/"
+    owner: root
+    group: root
+    mode: "0644"
+  when: app_src.stat.exists
+  notify: Restart {{ app_name }} service
+  tags: [app, install]
+
+- name: Skip copy (path not found)
+  debug:
+    msg: "Skipping copy because {{ path }} does not exist on controller"
+  when: not app_src.stat.exists
+  tags: [app, install]
+
+- name: Check if requirements.txt exists
+  stat:
+    path: "/opt/{{ app_name }}/requirements.txt"
+  register: reqfile
+  tags: [app, install]
+
+- name: Install dependencies for app
+  command: >
+    /root/.local/bin/uv pip install
+    --python /opt/ocr/venv/bin/python
+    -r /opt/{{ app_name }}/requirements.txt
+  when:
+    - fastapi_requirements | default(true)
+    - reqfile.stat.exists
+  tags: [app, install]
+
+- name: Deploy systemd service
+  template:
+    src: uvicorn.service.j2
+    dest: /etc/systemd/system/{{ app_name }}.service
+    mode: "0644"
+  notify: Reload systemd
+  tags: [app, install]
+
+- name: Add reverse proxy block for {{ app_name }} to apps.conf
+  blockinfile:
+    path: /etc/nginx/snippets/apps.conf
+    marker: "# {mark} {{ app_name }}"
+    block: "{{ lookup('template', 'reverse_proxy.conf.j2') }}"
+  notify: Reload nginx
+  tags: [app, install]

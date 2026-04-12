@@ -1,0 +1,6 @@
+- name: Add reverse proxy block for {{ ocrapp_name }} to apps.conf
+  blockinfile:
+    path: /etc/nginx/snippets/apps.conf
+    marker: "# {mark} {{ ocrapp_name }}"
+    block: "{{ lookup('template', 'reverse_proxy.conf.j2') }}"
+  notify: Reload nginx

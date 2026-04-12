@@ -1,7 +1,0 @@
-[Unit]
-Description=Daily CSV → PostgreSQL ETL
-
-[Service]
-Type=oneshot
-WorkingDirectory=/opt/etl
-ExecStart=/usr/local/bin/uv run main.py

@@ -1,8 +1,0 @@
-fastapi_user: ubuntu
-fastapi_local_src: "/home/{{ansible_user}}/projects/fastapi"
-fastapi_app_dir: "/var/www/fastapi"
-fastapi_service_name: fastapi
-fastapi_module: app.main
-fastapi_callable: app
-fastapi_port: 8000
-fastapi_workers: 4

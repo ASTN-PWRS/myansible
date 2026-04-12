@@ -1,8 +1,0 @@
----
-- name: Restart Express app
-  systemd:
-    name: "{{ item.name }}"
-    enabled: yes
-    state: restarted
-  tags:
-    - express_service

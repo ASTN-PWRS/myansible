@@ -1,3 +1,6 @@
+#
+uv_install_dir: "/opt/uv"
+uv_venv_dir: "/opt/uv/default"
 # Nginx
 nginx_listen_port: 3000
 # php

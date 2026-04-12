@@ -1,0 +1,84 @@
+---
+# ============================
+# Keyrings directory
+# ============================
+- name: Ensure keyrings directory exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+  tags: [postgresql, postgresql_install, install]
+
+# ============================
+# PostgreSQL GPG key
+# ============================
+- name: Download PostgreSQL GPG key
+  get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /etc/apt/keyrings/postgresql.asc
+    mode: "0644"
+  tags: [postgresql, postgresql_install, install]
+
+# ============================
+# PostgreSQL APT repository
+# ============================
+- name: Add PostgreSQL APT repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt {{ ansible_facts['distribution_release'] }}-pgdg main"
+    state: present
+  tags: [postgresql, postgresql_install, install]
+
+# ============================
+# Install PostgreSQL (version from all.yml)
+# ============================
+- name: Install PostgreSQL {{ postgresql_version }}
+  apt:
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - postgresql-contrib
+    state: present
+    update_cache: yes
+  tags: [postgresql, postgresql_install, install]
+
+# ============================
+# Install PostgreSQL config
+# ============================
+
+- name: Deploy PostgreSQL network config
+  template:
+    src: "10-network.conf.j2"
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/10-network.conf"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  tags: [postgresql, postgresql_install, install]
+
+- name: Deploy pg_hba.conf
+  template:
+    src: "pg_hba.conf.j2"
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  tags: [postgresql, postgresql_install, install]
+
+- name: Enable and restart PostgreSQL
+  systemd:
+    name: postgresql
+    enabled: true
+    state: restarted
+  tags: [postgresql, postgresql_install, install]
+
+- name: Set postgres user password
+  become: true
+  shell: |
+    sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ postgresql_password }}';"
+  tags: [postgresql, postgresql_install, install]
+
+- name: Verify PostgreSQL is active
+  systemd:
+    name: postgresql
+  register: postgresql_status
+  failed_when: postgresql_status.status.ActiveState != "active"
+  changed_when: false
+  tags: [postgresql, postgresql_install, install]

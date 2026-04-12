@@ -1,0 +1,82 @@
+---
+- name: Install required packages for pg_bigm build
+  apt:
+    name:
+      - git
+      - build-essential
+      - postgresql-server-dev-18
+      - postgresql-client-18
+    state: present
+    update_cache: yes
+  tags: [pg_bigm, install]
+
+# 🔥 pg_configを動的取得（ここ重要）
+- name: Get pg_config path
+  command: which pg_config
+  register: pg_config_path
+  changed_when: false
+  tags: [pg_bigm, install]
+
+- name: Debug pg_config path
+  debug:
+    var: pg_config_path.stdout
+  tags: [pg_bigm, install]
+
+- name: Clone pg_bigm repository
+  git:
+    repo: https://github.com/pgbigm/pg_bigm.git
+    dest: /usr/local/src/pg_bigm
+    version: master
+    update: no
+  tags: [pg_bigm, install]
+
+- name: Check if pg_bigm is already installed
+  stat:
+    path: /usr/lib/postgresql/18/lib/pg_bigm.so
+  register: pg_bigm_installed
+  tags: [pg_bigm, install]
+
+# 🔥 PG_CONFIG + USE_PGXS を environment で渡す
+- name: Build pg_bigm
+  command: make
+  args:
+    chdir: /usr/local/src/pg_bigm
+  environment:
+    PG_CONFIG: "{{ pg_config_path.stdout }}"
+    USE_PGXS: "1"
+  when: not pg_bigm_installed.stat.exists
+  tags: [pg_bigm, install]
+
+- name: Install pg_bigm
+  command: make install
+  args:
+    chdir: /usr/local/src/pg_bigm
+  environment:
+    PG_CONFIG: "{{ pg_config_path.stdout }}"
+    USE_PGXS: "1"
+  when: not pg_bigm_installed.stat.exists
+  tags: [pg_bigm, install]
+
+# shared_preload_libraries 設定
+- name: Configure shared_preload_libraries for pg_bigm
+  lineinfile:
+    path: /etc/postgresql/18/main/postgresql.conf
+    regexp: "^#?shared_preload_libraries"
+    line: "shared_preload_libraries = 'pg_bigm'"
+    backrefs: yes
+  notify: restart postgresql
+  tags: [pg_bigm, install]
+
+# WSL対応
+- name: Ensure PostgreSQL is running (WSL safe)
+  command: pg_ctlcluster 18 main start
+  changed_when: false
+  failed_when: false
+  tags: [pg_bigm, install]
+
+# 🔥 become使わない（ACL問題回避）
+- name: Create pg_bigm extension in postgres DB
+  command: >
+    sudo -u postgres psql -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_bigm;"
+  changed_when: false
+  tags: [pg_bigm, install]
