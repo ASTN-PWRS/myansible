@@ -1,0 +1,24 @@
+import subprocess
+import os
+
+def docx_to_images(docx_path, out_dir):
+    os.makedirs(out_dir, exist_ok=True)
+
+    # DOCX → PDF
+    subprocess.run([
+        "soffice", "--headless",
+        "--convert-to", "pdf",
+        docx_path,
+        "--outdir", out_dir
+    ], check=True)
+
+    pdf_path = os.path.join(out_dir, os.path.basename(docx_path).replace(".docx", ".pdf"))
+
+    # PDF → PNG
+    subprocess.run([
+        "mutool", "convert",
+        "-o", f"{out_dir}/page-%d.png",
+        pdf_path
+    ], check=True)
+
+    return sorted([os.path.join(out_dir, f) for f in os.listdir(out_dir) if f.endswith(".png")])
