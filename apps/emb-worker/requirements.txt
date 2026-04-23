@@ -1,0 +1,15 @@
+# --- Standard library imports (json) は不要 ---
+
+# Redis client
+redis>=5.0.0
+
+# PostgreSQL driver (psycopg3)
+psycopg[binary]>=3.1
+psycopg-pool>=3.1
+
+# Transformers + PyTorch
+transformers>=4.40.0
+torch>=2.2.0
+
+# Optional: tokenizer/model utilities
+sentencepiece>=0.1.99

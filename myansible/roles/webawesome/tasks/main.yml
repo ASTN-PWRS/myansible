@@ -1,0 +1,63 @@
+---
+# 1. Web Awesome を clone（idempotent）
+- name: Clone Web Awesome repository
+  ansible.builtin.git:
+    repo: "https://github.com/shoelace-style/webawesome.git"
+    dest: "/opt/webawesome"
+    version: "main"
+    update: yes
+
+# 2. Node 18 を nvm でロードして npm install
+- name: Install dependencies via npm
+  ansible.builtin.shell: |
+    source ~/.nvm/nvm.sh
+    nvm install 18
+    nvm use 18
+    npm install
+  args:
+    chdir: "/opt/webawesome"
+  register: npm_install
+  changed_when: "'added' in npm_install.stdout or 'up to date' not in npm_install.stdout"
+
+# 3. npm run build（dist/ が無い時だけ実行）
+- name: Check if Web Awesome is already built
+  ansible.builtin.stat:
+    path: "/opt/webawesome/packages/webawesome/dist/webawesome.min.js"
+  register: wa_dist
+
+- name: Build Web Awesome
+  ansible.builtin.shell: |
+    source ~/.nvm/nvm.sh
+    nvm use 18
+    npm run build
+  args:
+    chdir: "/opt/webawesome"
+  when: not wa_dist.stat.exists
+
+# 4. /www/share/js を作成
+- name: Ensure /www/share/js exists
+  ansible.builtin.file:
+    path: "/www/share/js"
+    state: directory
+    mode: "0755"
+
+# 5. webawesome.min.js を配置
+- name: Deploy webawesome.min.js
+  ansible.builtin.copy:
+    src: "/opt/webawesome/packages/webawesome/dist/webawesome.min.js"
+    dest: "/www/share/js/webawesome.min.js"
+    mode: "0644"
+
+# 6. CSS も使う場合（任意）
+- name: Ensure /www/share/css exists
+  ansible.builtin.file:
+    path: "/www/share/css"
+    state: directory
+    mode: "0755"
+
+- name: Deploy default theme CSS
+  ansible.builtin.copy:
+    src: "/opt/webawesome/packages/webawesome/dist/styles/themes/default.css"
+    dest: "/www/share/css/default.css"
+    mode: "0644"
+  when: wa_dist.stat.exists

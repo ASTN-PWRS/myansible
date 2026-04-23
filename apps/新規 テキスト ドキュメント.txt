@@ -1,0 +1,15 @@
+<img id="preview" />
+
+<script>
+async function loadImage(id) {
+    const res = await fetch(`/images/${id}`);
+    if (!res.ok) {
+        console.error("Failed to load image");
+        return;
+    }
+    const blob = await res.blob();
+    document.getElementById("preview").src = URL.createObjectURL(blob);
+}
+
+loadImage("YOUR-UUID-HERE");
+</script>
