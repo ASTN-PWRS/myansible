@@ -1,0 +1,34 @@
+- name: Install nvm (correct user)
+  become: true
+  become_user: "{{ ansible_user }}"
+  shell: |
+    set -e
+    if [ ! -d "$HOME/.nvm" ]; then
+      curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    fi
+  args:
+    executable: /bin/bash
+  tags: [install]
+
+- name: Install Node.js LTS via nvm
+  become: true
+  become_user: "{{ ansible_user }}"
+  shell: |
+    set -e
+    . "$HOME/.nvm/nvm.sh"
+    nvm install --lts
+    nvm alias default 'lts/*'
+  args:
+    executable: /bin/bash
+  tags: [install]
+
+- name: Ensure nvm is loaded in .bashrc
+  become: true
+  become_user: "{{ ansible_user }}"
+  lineinfile:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    line: |
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    create: yes
+  tags: [install]

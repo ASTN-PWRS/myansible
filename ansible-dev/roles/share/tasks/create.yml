@@ -1,0 +1,24 @@
+---
+# ===========================
+# 1. /var/www/share を作成
+# ===========================
+- name: Ensure /var/www/share exists
+  become: true
+  file:
+    path: /var/www/share
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0755"
+
+# ===========================
+# 2. /var/www/share 以下の権限を一括適用
+# ===========================
+- name: Fix permissions under /var/www/share
+  become: true
+  file:
+    path: /var/www/share
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "u=rwX,g=rX,o=rX"
+    recurse: yes

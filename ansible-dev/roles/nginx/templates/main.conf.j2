@@ -1,0 +1,17 @@
+server {
+    listen {{ nginx_listen_port }};
+    server_name localhost;
+
+    root /var/www/html;
+    index index.html index.php;
+
+    location /share/ {
+        alias /var/www/share/;
+        access_log off;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+    }
+
+    # nginx-apps ロールが生成する apps.conf を include
+    include /etc/nginx/snippets/apps.conf;
+}

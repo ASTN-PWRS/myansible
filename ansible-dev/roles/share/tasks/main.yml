@@ -1,0 +1,12 @@
+---
+# create.yml → /var/www/share の作成
+- import_tasks: create.yml
+  tags: [install, share]
+
+# fonts.yml → fonts のコピー & woff2 生成
+- import_tasks: fonts.yml
+  tags: [install, share]
+
+# webawesome.yml → dist-cdn の配置
+- import_tasks: webawesome.yml
+  tags: [install, share]

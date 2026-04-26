@@ -1,0 +1,101 @@
+---
+# ===========================
+# 2. fonts ディレクトリ作成
+# ===========================
+- name: Ensure /var/www/share/fonts exists
+  become: true
+  file:
+    path: /var/www/share/fonts
+    state: directory
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0755"
+  tags: [install, share]
+
+# ===========================
+# 3. css ディレクトリ作成
+# ===========================
+- name: Ensure /var/www/share/css exists
+  become: true
+  file:
+    path: /var/www/share/css
+    state: directory
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0755"
+  tags: [install, share]
+
+# ===========================
+# 4. fonts のコピー（ttf/woff2）
+# ===========================
+- name: Copy fonts
+  become: true
+  copy:
+    src: "fonts/"
+    dest: "/var/www/share/fonts/"
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0644"
+  tags: [install, share]
+
+# ===========================
+# 5. css のコピー
+# ===========================
+- name: Copy css
+  become: true
+  copy:
+    src: "css/"
+    dest: "/var/www/share/css/"
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0644"
+  tags: [install, share]
+
+# ===========================
+# 6. woff2_compress の存在確認
+# ===========================
+- name: Install woff2_compress
+  apt:
+    name: woff2
+    state: present
+    update_cache: yes
+  tags: [install, share]
+
+- name: Check woff2_compress exists
+  stat:
+    path: /usr/bin/woff2_compress
+  register: woff2_bin
+  tags: [install, share]
+
+- name: Fail if woff2_compress is missing
+  fail:
+    msg: "woff2_compress not found"
+  when: not woff2_bin.stat.exists
+# ===========================
+# 7. ttf → woff2 変換（必要な場合のみ）
+# ===========================
+- name: Convert ttf to woff2
+  become: true
+  shell: |
+    for f in /var/www/share/fonts/*.ttf; do
+      [ -f "$f" ] || continue
+      woff2_compress "$f"
+    done
+  args:
+    executable: /bin/bash
+  when: woff2_bin.stat.exists
+  tags: [install, share]
+
+# ===========================
+# 8. パーミッション最終調整
+# ===========================
+- name: Fix permissions for /var/www/share
+  become: true
+  file:
+    path: /var/www/share
+    state: directory
+    recurse: yes
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0755"
+  tags: [install, share]

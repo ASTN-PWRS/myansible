@@ -1,0 +1,142 @@
+# ----------------------------------------
+# 1) dpkg/apt ロック待ち（Ubuntu 24.04 安定化）
+# ----------------------------------------
+- name: Wait for dpkg lock
+  shell: |
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+      sleep 1
+    done
+  changed_when: false
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 2) Microsoft package repo を取得
+# ----------------------------------------
+- name: Download Microsoft package repository
+  get_url:
+    url: https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
+    dest: /tmp/packages-microsoft-prod.deb
+    mode: "0644"
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 3) dpkg ではなく apt: deb= を使う（ロック競合しない）
+# ----------------------------------------
+- name: Install Microsoft package repository
+  apt:
+    deb: /tmp/packages-microsoft-prod.deb
+    state: present
+    update_cache: yes
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 4) apt update（必須）
+# ----------------------------------------
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 5) .NET SDK 10 をインストール
+# ----------------------------------------
+- name: Install .NET 10 SDK
+  apt:
+    name: dotnet-sdk-10.0
+    state: present
+    update_cache: yes
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 6) Garnet の安定版を clone
+# ----------------------------------------
+- name: Clone Garnet repository (stable tag)
+  git:
+    repo: "https://github.com/microsoft/garnet.git"
+    dest: "/opt/garnet"
+    version: "v1.1.1"
+    force: yes
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 7) 権限修正（dotnet build が root 以外で死ぬ対策）
+# ----------------------------------------
+- name: Fix permissions for garnet directory
+  file:
+    path: /opt/garnet
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    recurse: yes
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 8) Garnet をビルド（net8.0）
+# ----------------------------------------
+- name: Build Garnet (stable)
+  shell: |
+    cd /opt/garnet
+    dotnet restore ./main/GarnetServer/GarnetServer.csproj
+    dotnet publish ./main/GarnetServer/GarnetServer.csproj \
+      -c Release \
+      -f net8.0 \
+      -o /opt/garnet/build
+  args:
+    creates: /opt/garnet/build/GarnetServer
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 9) config ディレクトリ作成
+# ----------------------------------------
+- name: Create Garnet config directory
+  file:
+    path: /etc/garnet
+    state: directory
+    mode: "0755"
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 10) config.json 配置
+# ----------------------------------------
+- name: Deploy Garnet config.json
+  template:
+    src: config.json.j2
+    dest: /etc/garnet/config.json
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 11) systemd 配置
+# ----------------------------------------
+- name: Deploy systemd service
+  template:
+    src: garnet.service.j2
+    dest: /etc/systemd/system/garnet.service
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 12) systemd reload
+# ----------------------------------------
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 13) install redis-cli
+# ----------------------------------------
+- name: Wait for dpkg lock to be released
+  become: yes
+  shell: |
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+      echo "Waiting for dpkg lock..."
+      sleep 3
+    done
+  changed_when: false
+  tags: [garnet, garnet_install, install]
+
+- name: Install redis-cli only (redis-tools)
+  become: yes
+  apt:
+    name: redis-tools
+    state: present
+    update_cache: yes
+  tags: [garnet, garnet_install, install]

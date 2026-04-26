@@ -1,0 +1,14 @@
+- hosts: local
+  become: yes
+  roles:
+    - common # OS 基本設定
+    - node # Node.js / nvm
+    - share
+    - php # PHP-FPM + php.ini
+    - nginx # nginx install
+    - composer # composer install
+    - python # python + uv
+    - postgresql # PostgreSQL install + config + backup
+    - postgresql_pg_bigm # pg_bigm
+    - garnet # Garnet
+    - supervisor

@@ -1,0 +1,118 @@
+---
+# ===========================
+# 1. ビルドキャッシュディレクトリ
+# ===========================
+- name: Ensure build cache directory exists
+  become: true
+  file:
+    path: /srv/webawesome-pack
+    state: directory
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0755"
+  tags: [install, webawesome]
+
+# ===========================
+# 2. 既存 tgz の確認（冪等化）
+# ===========================
+- name: Find existing tgz
+  become: true
+  find:
+    paths: /srv/webawesome-pack
+    patterns: "*.tgz"
+  register: existing_tgz
+  tags: [install, webawesome]
+
+# ===========================
+# 3. npm pack（"{{ansible_user}}" で実行・冪等化）
+# ===========================
+# ===========================
+# 3. npm pack（asao で実行・冪等化）
+# ===========================
+- name: Pack webawesome (only if not exists)
+  become: true
+  become_user: "{{ansible_user}}"
+  shell: |
+    export HOME="/home/{{ ansible_user }}"
+    . "$HOME/.nvm/nvm.sh"
+
+    cd /srv/webawesome-pack
+    npm pack @awesome.me/webawesome
+  args:
+    executable: /bin/bash
+  when: existing_tgz.files | length == 0
+  register: npm_pack_result
+  tags: [install, webawesome]
+
+# ===========================
+# 4. tgz ファイル名の取得
+# ===========================
+- name: Get tgz filename
+  shell: ls /srv/webawesome-pack/*.tgz | head -n 1
+  register: tgz_file
+  changed_when: false
+  tags: [install, webawesome]
+
+# ===========================
+# 5. tar 展開（確実に更新される安全版）
+# ===========================
+- name: Extract webawesome package
+  become: true
+  shell: |
+    rm -rf /srv/webawesome-pack/package
+    tar -xzf "{{ tgz_file.stdout }}" -C /srv/webawesome-pack
+  args:
+    executable: /bin/bash
+  when: tgz_file.stdout != ""
+  tags: [install, webawesome]
+
+# ===========================
+# 8. webawesome 配置先ディレクトリ
+# ===========================
+- name: Ensure webawesome root exists
+  become: true
+  file:
+    path: /var/www/share/webawesome
+    state: directory
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0755"
+  tags: [install, webawesome]
+
+# ===========================
+# 9. dist-cdn 更新チェック
+# ===========================
+- name: Check if dist-cdn has updates
+  shell: |
+    rsync -avnc --delete /srv/webawesome-pack/package/dist-cdn/ /var/www/share/webawesome/ | grep -q .
+  register: webawesome_update_needed
+  failed_when: false
+  changed_when: false
+  tags: [install, webawesome]
+
+# ===========================
+# 10. dist-cdn 配置（差分のみ）
+# ===========================
+- name: Sync dist-cdn
+  become: true
+  synchronize:
+    src: "/srv/webawesome-pack/package/dist-cdn/"
+    dest: "/var/www/share/webawesome/"
+    delete: yes
+    recursive: yes
+  when: webawesome_update_needed.rc == 0
+  tags: [install, webawesome]
+
+# ===========================
+# 11. 最終パーミッション調整
+# ===========================
+- name: Fix permissions for webawesome
+  become: true
+  file:
+    path: /var/www/share/webawesome
+    state: directory
+    recurse: yes
+    owner: "{{ansible_user}}"
+    group: www-data
+    mode: "0755"
+  tags: [install, webawesome]
