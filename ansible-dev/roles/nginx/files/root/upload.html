@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja" class="wa-theme-default">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MyApp Top</title>
+
+    <!-- Web Awesome -->
+    <link rel="stylesheet" href="/share/webawesome/styles/webawesome.css" />
+    <link rel="stylesheet" href="/share/webawesome/styles/themes/default.css" />
+    <link rel="stylesheet" href="/share/css/fonts.css" />
+    <script type="module">
+      import "/share/webawesome/components/page/page.js";
+      import "/share/webawesome/components/card/card.js";
+      import "/share/webawesome/components/button/button.js";
+      import "/share/webawesome/components/icon/icon.js";
+    </script>
+    <link rel="stylesheet" href="./css/styles.css" />
+    <script src="./js/theme-toggle.js"></script>
+  </head>
+  <body>
+    <wa-page>
+      <!-- ヘッダー -->
+      <header slot="header" class="wa-split">
+        <div class="wa-cluster">
+          <strong>MyApp</strong>
+        </div>
+        <div class="wa-cluster wa-gap-xs">
+          <theme-toggle></theme-toggle>
+        </div>
+      </header>
+      <!-- メイン -->
+      <main>
+        <div class="content">
+          <wa-card class="drop-card" id="drop-zone">
+            <div slot="header">ファイルをドロップ</div>
+            <div class="drop-inner">
+              <wa-icon name="upload" size="2xl"></wa-icon>
+              <p>ここにファイルをドロップしてください</p>
+            </div>
+            <div slot="footer">PDF / 画像 / ZIP など対応</div>
+          </wa-card>
+        </div>
+      </main>
+      <!-- フッター -->
+      <footer slot="footer">© 2026</footer>
+    </wa-page>
+  </body>
+</html>

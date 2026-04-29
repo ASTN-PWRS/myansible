@@ -1,0 +1,85 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+wa-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--wa-color-surface-lowered);
+}
+
+header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 10px;
+  background-color: light-dark(
+    var(--wa-color-brand-60),
+    var(--wa-color-brand-05)
+  );
+}
+
+footer {
+  flex-shrink: 0;
+  padding: 12px;
+  text-align: center;
+}
+/* content を画面いっぱいにして中央寄せ */
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* 画面いっぱい */
+}
+
+/* Drop Zone カード */
+/* content を画面いっぱいにして中央寄せ */
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Drop Zone カード */
+.drop-card {
+  width: 60%;
+  height: 60vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+
+  border: 2px dashed var(--wa-color-border);
+  background: var(--wa-color-surface);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+/* 内部のアイコンとテキスト */
+.drop-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  pointer-events: none;
+}
+
+/* Drag Over 時に灰色へ */
+.drop-card.dragover {
+  background: #e0e0e0; /* ← 完全に灰色 */
+  border-color: var(--wa-color-primary);
+}
