@@ -1,0 +1,99 @@
+# =========================
+# directories
+# =========================
+- name: Ensure OCR model base directory exists
+  file:
+    path: "{{ model_path }}"
+    state: directory
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+    mode: "0755"
+  tags: [install, ocr-build]
+
+# =========================
+# venv
+# =========================
+- name: Ensure OCR venv exists
+  command: >
+    /root/.local/bin/uv venv /opt/ocr/venv --python 3.13
+  args:
+    creates: "/opt/ocr/venv/bin/python"
+  tags: [install, ocr-build]
+
+- name: Install base tools
+  command: >
+    /root/.local/bin/uv pip install
+    --python /opt/ocr/venv/bin/python
+    pip setuptools wheel
+  tags: [install, ocr-build]
+
+# =========================
+# install paddle stack
+# =========================
+- name: Install PaddleOCR stack (fixed)
+  command: >
+    /root/.local/bin/uv pip install
+    --python /opt/ocr/venv/bin/python
+    paddleocr==3.5.0
+    paddlepaddle==3.0.0
+    paddlex==3.5.1
+  tags: [install, ocr-build]
+
+# =========================
+# STEP 1: warmup (directly into /opt)
+# =========================
+- name: Warmup PaddleOCR model (download into /opt)
+  shell: |
+    export PADDLE_PDX_CACHE_HOME="{{ model_path }}"
+
+    /opt/ocr/venv/bin/python - << 'EOF'
+    from paddleocr import PaddleOCR
+
+    ocr = PaddleOCR(
+        use_textline_orientation=True,
+        lang="japan"
+    )
+
+    # trigger model download
+    try:
+        ocr.ocr([[0,0],[10,10]])
+    except Exception as e:
+        print("warmup done:", e)
+    EOF
+  environment:
+    PADDLE_PDX_CACHE_HOME: "{{ model_path }}"
+  tags: [install, ocr-build]
+
+# =========================
+# STEP 2: fix ownership
+# =========================
+- name: Fix permissions
+  file:
+    path: "{{ model_path }}"
+    recurse: yes
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+  tags: [install, ocr-build]
+
+# =========================
+# STEP 3: verify preload
+# =========================
+- name: Verify OCR model works from /opt
+  shell: |
+    export PADDLE_PDX_CACHE_HOME="{{ model_path }}"
+
+    /opt/ocr/venv/bin/python - << 'EOF'
+    from paddleocr import PaddleOCR
+
+    print("verify start")
+
+    ocr = PaddleOCR(
+        use_textline_orientation=True,
+        lang="japan"
+    )
+
+    print(ocr.predict([[0,0],[10,10]]))
+    EOF
+  environment:
+    PADDLE_PDX_CACHE_HOME: "{{ model_path }}"
+  tags: [install, ocr-build]

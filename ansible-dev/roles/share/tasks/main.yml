@@ -10,3 +10,7 @@
 # webawesome.yml → dist-cdn の配置
 - import_tasks: webawesome.yml
   tags: [install, share]
+
+# LibreOffice for docx to pdf
+- import_tasks: soffice.yml
+  tags: [install, share]

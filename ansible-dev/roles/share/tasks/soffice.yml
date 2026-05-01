@@ -1,0 +1,8 @@
+- name: Install minimal LibreOffice for docx to pdf
+  apt:
+    name:
+      - libreoffice-core
+      - libreoffice-writer
+      - libreoffice-common
+    state: present
+    update_cache: yes

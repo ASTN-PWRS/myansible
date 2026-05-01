@@ -140,3 +140,45 @@
     state: present
     update_cache: yes
   tags: [garnet, garnet_install, install]
+# ----------------------------------------
+# dotnet キャッシュ削除
+# ----------------------------------------
+- name: Cleanup dotnet NuGet cache
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/root/.nuget/packages"
+    - "/root/.local/share/NuGet/v3-cache"
+  tags: [garnet_cleanup]
+
+# ----------------------------------------
+# apt キャッシュ削減
+# ----------------------------------------
+- name: Clean apt cache
+  apt:
+    autoclean: yes
+  tags: [garnet_cleanup]
+
+- name: Remove unused apt packages
+  apt:
+    autoremove: yes
+  tags: [garnet_cleanup]
+
+# ----------------------------------------
+# apt archive 削除（任意）
+# ----------------------------------------
+- name: Remove apt archive cache
+  file:
+    path: /var/cache/apt/archives
+    state: absent
+  tags: [garnet_cleanup]
+
+# ----------------------------------------
+# Garnet build ディレクトリ削除
+# ----------------------------------------
+- name: Cleanup old Garnet build directory
+  file:
+    path: /opt/garnet/build
+    state: absent
+  tags: [garnet_cleanup]

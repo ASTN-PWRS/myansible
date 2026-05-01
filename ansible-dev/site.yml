@@ -12,3 +12,5 @@
     - postgresql_pg_bigm # pg_bigm
     - garnet # Garnet
     - supervisor
+    - paddleocr-build
+    - embedding-build

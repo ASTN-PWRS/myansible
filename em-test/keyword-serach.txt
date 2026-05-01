@@ -1,0 +1,49 @@
+WITH query AS (
+  SELECT
+    $1::text[] AS q_keywords,   -- GPT-4o が生成したキーワード配列
+    $2::text[] AS q_regnums     -- 規格番号候補（例: ARRAY['JIS A 1304','ISO 834']）
+),
+candidates AS (
+  SELECT
+    d.id,
+    d.document_id,
+    d.page_number,
+    d.content,
+
+    -- キーワード一致数（多いほど良い）
+    (
+      SELECT COUNT(*)
+      FROM unnest(q.q_keywords) kw
+      WHERE d.content LIKE '%' || kw || '%'
+    ) AS kw_hits,
+
+    -- 規格番号一致（最重要）
+    EXISTS (
+      SELECT 1
+      FROM unnest(q.q_regnums) rn
+      WHERE d.content LIKE '%' || rn || '%'
+    ) AS reg_match
+
+  FROM ocr_pages d
+  CROSS JOIN query q
+)
+
+SELECT
+  id,
+  document_id,
+  page_number,
+  content,
+  kw_hits,
+  reg_match,
+
+  -- 🔥 合成スコア（キーワード検索専用）
+  (
+    -1.0 * kw_hits +                -- キーワード一致数が多いほど上位
+    CASE WHEN reg_match THEN -5.0   -- 規格番号一致は最優先
+         ELSE 0.0 END
+  ) AS score
+
+FROM candidates
+WHERE kw_hits > 0 OR reg_match = TRUE   -- 何も一致しない行は除外
+ORDER BY score ASC
+LIMIT 50;
