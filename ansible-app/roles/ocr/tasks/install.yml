@@ -68,3 +68,15 @@
     block: "{{ lookup('template', 'reverse_proxy.conf.j2') }}"
   notify: Reload nginx
   tags: [app, install]
+
+# ----------------------------------------
+# 🔥 upload先：/var/tmp/ocr を作成するタスク
+# ----------------------------------------
+- name: Ensure /var/tmp/ocr directory exists
+  file:
+    path: "/var/tmp/ocr"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags: [app, install]

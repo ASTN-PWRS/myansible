@@ -1,22 +1,43 @@
 from fastapi import APIRouter, UploadFile, File
-from db import pool
-from ocr import pdf_ocr
+from uuid6 import uuid7
+import os
+import json
+import redis
+from typing import List
 
 router = APIRouter()
+r = redis.Redis(host="localhost", port=6379, decode_responses=True)
 
-@router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
-    pdf_bytes = await file.read()
-    file_name = file.filename
+@router.post("/api/upload")
+async def upload_pdf(files: List[UploadFile] = File(...)):
+    task_id = str(uuid7())
+    base_dir = f"/var/tmp/ocr/{task_id}"
+    os.makedirs(base_dir, exist_ok=True)
 
-    ocr_results = pdf_ocr(pdf_bytes)
+    saved_files = []
 
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            for item in ocr_results:
-                cur.execute("""
-                    INSERT INTO document_pages (file_name, page_number, content)
-                    VALUES (%s, %s, %s)
-                """, (file_name, item["page"], item["text"]))
+    for file in files:
+        file_bytes = await file.read()
+        file_name = file.filename
+        pdf_path = f"{base_dir}/{file_name}"
 
-    return {"status": "ok", "pages": len(ocr_results)}
+        # --- 保存完了を保証する同期 I/O ---
+        with open(pdf_path, "wb") as f:
+            f.write(file_bytes)
+            f.flush()
+            os.fsync(f.fileno())  # ← これでディスク書き込み完了を保証
+
+        saved_files.append({
+            "file_name": file_name,
+            "saved_path": pdf_path
+        })
+
+    # --- 保存完了後にのみ rpush ---
+    payload = {
+        "task_id": task_id,
+        "files": saved_files
+    }
+
+    r.rpush("queue:ocr", json.dumps(payload))
+
+    return payload

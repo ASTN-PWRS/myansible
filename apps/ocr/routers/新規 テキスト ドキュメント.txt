@@ -1,0 +1,39 @@
+FastAPI (upload)
+  ↓
+Garnet (task hash)
+  ↓
+Garnet (queue:tasks)
+  ↓
+worker (OCR + embedding)
+  ↓
+PostgreSQL (pgvector + pg_bigm)
+  ↓
+Garnet (task status update)
+  ↓
+FastAPI (task status API)
+
+
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_bigm;
+
+CREATE TABLE IF NOT EXISTS document_pages (
+    id            SERIAL PRIMARY KEY,
+    file_name     TEXT NOT NULL,
+    file_hash     TEXT,              -- PDF 全体のハッシュ
+    page_number   INTEGER NOT NULL,
+    content       TEXT,
+    content_hash  TEXT,              -- ページ単位のハッシュ
+    embedding     VECTOR(1024),      -- Jina v3
+    created_at    TIMESTAMP DEFAULT now(),
+
+    CONSTRAINT unique_page UNIQUE (file_name, page_number)
+);
+
+-- 日本語キーワード検索（pg_bigm）
+CREATE INDEX IF NOT EXISTS idx_content_bigm
+ON document_pages USING GIN (content gin_bigm_ops);
+
+-- embedding 検索用（pgvector）
+CREATE INDEX IF NOT EXISTS idx_embedding
+ON document_pages USING ivfflat (embedding vector_cosine)
+WITH (lists = 100);

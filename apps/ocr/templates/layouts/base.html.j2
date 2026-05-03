@@ -2,23 +2,32 @@
 <html lang="ja" class="wa-theme-default">
   <head>
     <meta charset="UTF-8" />
-    <title>MyApp Top</title>
+    <title>{% block title %}MyApp{% endblock %}</title>
 
     <!-- Web Awesome -->
     <link rel="stylesheet" href="/share/webawesome/styles/webawesome.css" />
     <link rel="stylesheet" href="/share/webawesome/styles/themes/default.css" />
     <link rel="stylesheet" href="/share/css/fonts.css" />
+
     <script type="module">
       import "/share/webawesome/components/page/page.js";
       import "/share/webawesome/components/card/card.js";
       import "/share/webawesome/components/button/button.js";
       import "/share/webawesome/components/icon/icon.js";
     </script>
-    <link rel="stylesheet" href="./css/styles.css" />
-    <script src="./js/theme-toggle.js"></script>
+
+    <!-- App styles -->
+    <link rel="stylesheet" href="/static/css/styles.css" />
+
+    <!-- Theme toggle -->
+    <script src="/static/js/theme-toggle.js"></script>
+
+    {% block head %}{% endblock %}
   </head>
+
   <body>
-    <!-- overlayをwa-pageの外に配置 -->
+    <!-- overlay（ドロップゾーン） -->
+    {% block overlay %}
     <div class="overlay">
       <wa-card class="drop-card" id="drop-zone">
         <div slot="header">ファイルをドロップ</div>
@@ -29,8 +38,10 @@
         <div slot="footer">PDF / 画像 / ZIP など対応</div>
       </wa-card>
     </div>
+    {% endblock %}
+
     <wa-page>
-      <!-- ヘッダー -->
+      <!-- Header -->
       <header slot="header" class="wa-split">
         <div class="wa-cluster">
           <strong>MyApp</strong>
@@ -39,12 +50,16 @@
           <theme-toggle></theme-toggle>
         </div>
       </header>
-      <!-- メイン -->
+
+      <!-- Main -->
       <main>
-        <div class="content"></div>
+        {% block content %}{% endblock %}
       </main>
-      <!-- フッター -->
+
+      <!-- Footer -->
       <footer slot="footer">© 2026</footer>
     </wa-page>
+
+    {% block scripts %}{% endblock %}
   </body>
 </html>

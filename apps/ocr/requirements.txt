@@ -1,10 +1,12 @@
 fastapi
-jinja2
-opencv-python-headless
-paddleocr
-paddlepaddle
-pdf2image
-psycopg[binary]
-python-multipart
 uvicorn[standard]
+jinja2
+python-multipart
+# Garnet
+redis
+# PostgreSQL + async
+psycopg[binary]
+psycopg_pool
+# UUID7（uuid6）
+uuid6
 
