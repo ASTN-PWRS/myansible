@@ -1,8 +1,8 @@
 ---
 - name: Ensure OCR venv exists
-  command: "/root/.local/bin/uv venv /opt/{{ app_name }}/venv"
+  command: "/root/.local/bin/uv venv /opt/ocr/venv"
   args:
-    creates: "/opt/{{ app_name }}/venv/bin/python"
+    creates: "/opt/ocr/venv/bin/python"
   tags: [app, install]
 
 - name: Ensure app directory exists
@@ -52,31 +52,8 @@
     - fastapi_requirements | default(true)
     - reqfile.stat.exists
   tags: [app, install]
-
-- name: Deploy systemd service
-  template:
-    src: uvicorn.service.j2
-    dest: /etc/systemd/system/{{ app_name }}.service
-    mode: "0644"
-  notify: Reload systemd
-  tags: [app, install]
-
-- name: Add reverse proxy block for {{ app_name }} to apps.conf
-  blockinfile:
-    path: /etc/nginx/snippets/apps.conf
-    marker: "# {mark} {{ app_name }}"
-    block: "{{ lookup('template', 'reverse_proxy.conf.j2') }}"
-  notify: Reload nginx
-  tags: [app, install]
-
-# ----------------------------------------
-# 🔥 upload先を作成するタスク
-# ----------------------------------------
-- name: Ensure /var/tmp/{{ app_name }} directory exists
-  file:
-    path: "/var/tmp/{{ app_name }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
+- name: Run main.py manually
+  command: "/opt/{{ app_name }}/venv/bin/python /opt/{{ app_name }}/main.py"
+  args:
+    chdir: "/opt/{{ app_name }}"
   tags: [app, install]

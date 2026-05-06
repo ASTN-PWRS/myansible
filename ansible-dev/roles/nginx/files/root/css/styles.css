@@ -59,6 +59,7 @@ main {
 
 .component-card:hover wa-card {
   border-color: var(--wa-color-primary-500);
+  background: url("/share/images/zako2.png") center / cover no-repeat !important;
 }
 
 header {

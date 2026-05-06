@@ -1,0 +1,3 @@
+# defaults/main.yml
+app_name: ocr-worker
+path: /home/{{ansible_user}}/projects/{{app_name}}

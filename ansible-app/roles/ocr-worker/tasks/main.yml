@@ -1,0 +1,4 @@
+- name: Include app installation tasks
+  ansible.builtin.include_tasks: install.yml
+  tags:
+    - install
