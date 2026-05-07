@@ -1,8 +1,8 @@
 ---
-- name: Ensure OCR venv exists
-  command: "/root/.local/bin/uv venv /opt/ocr/venv"
+- name: Ensure venv exists
+  command: "/root/.local/bin/uv venv /opt/{{ app_name }}/venv"
   args:
-    creates: "/opt/ocr/venv/bin/python"
+    creates: "/opt/{{ app_name }}/venv/bin/python"
   tags: [app, install]
 
 - name: Ensure app directory exists
@@ -51,9 +51,4 @@
   when:
     - fastapi_requirements | default(true)
     - reqfile.stat.exists
-  tags: [app, install]
-- name: Run main.py manually
-  command: "/opt/{{ app_name }}/venv/bin/python /opt/{{ app_name }}/main.py"
-  args:
-    chdir: "/opt/{{ app_name }}"
   tags: [app, install]
