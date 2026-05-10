@@ -14,3 +14,4 @@
     - supervisor
     - paddleocr-build
     - embedding-build
+    - table-transformer-build

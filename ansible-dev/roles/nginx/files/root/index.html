@@ -8,10 +8,25 @@
     <link rel="stylesheet" href="/share/webawesome/webawesome.css" />
     <link rel="stylesheet" href="/share/css/fonts.css" />
     <link rel="stylesheet" href="./css/styles.css" />
+    <style>
+      .wa-stack {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* 必要なら */
+}
+.wa-grid {
+  flex-grow: 1;
+}
+      .wa-stack > main {
+  flex-grow: 1;
+  min-height: 0; /* ← これが重要 */
+}
+    </style>
     <script src="./js/theme-toggle.js"></script>
   </head>
   <body>
     <wa-page>
+      <div class="wa-stack">
       <!-- ヘッダー -->
       <header slot="header" class="wa-split">
         <div class="wa-cluster">
@@ -32,21 +47,20 @@
         </div>
       </header>
       <!-- メイン -->
-      <main>
-        <div class="content">
-          <div class="components-grid">
-            <a class="component-card" href="#">
-              <wa-card>
-                <div slot="header" class="component-card__title">Card</div>
-                <div>
+      <main class="wa-grid">
+        <div class="wa-justify-content-center wa-align-items-center" style="gap:10px">
+          <a class="component-card" href="#">
+            <wa-card>
+              <div slot="header" class="component-card__title">Card</div>
+              <div>
                   Cards group related content and actions inside a bordered
                   container.
-                </div>
-                <div slot="footer" class="component-card__meta">
+              </div>
+              <div slot="footer" class="component-card__meta">
                   Stable • Since 2.0
-                </div>
-              </wa-card>
-            </a>
+              </div>
+            </wa-card>
+          </a>
 
             <a class="component-card" href="#">
               <wa-card>
@@ -73,12 +87,12 @@
                 </div>
               </wa-card>
             </a>
-          </div>
         </div>
       </main>
 
       <!-- フッター -->
       <footer slot="footer">© 2026</footer>
+    </div>
     </wa-page>
     <script src="/share/webawesome/webawesome.js"></script>
   </body>

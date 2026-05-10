@@ -1,0 +1,71 @@
+# =========================
+# STEP 0: create model dir
+# =========================
+- name: Ensure Table Transformer model base directory exists
+  file:
+    path: "{{ model_path }}"
+    state: directory
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+    mode: "0755"
+  tags: [install, ocr]
+
+# =========================
+# STEP 1: create temp venv
+# =========================
+- name: Create temporary venv for table-transformer build
+  command: >
+    /root/.local/bin/uv venv /tmp/tt-venv --python 3.13
+  args:
+    creates: "/tmp/tt-venv/bin/python"
+  tags: [install, ocr]
+
+# =========================
+# STEP 2: install HF + torch + transformers
+# =========================
+- name: Install Table Transformer dependencies
+  command: >
+    /root/.local/bin/uv pip install
+    --python /tmp/tt-venv/bin/python
+    torch
+    torchvision
+    torchaudio
+    transformers
+    pillow
+    huggingface_hub
+  tags: [install, ocr]
+
+# =========================
+# STEP 3: warmup (download HF model into model_path)
+# =========================
+- name: Warmup Table Transformer model (download into model_path)
+  shell: |
+    /tmp/tt-venv/bin/python - << 'EOF'
+    from huggingface_hub import snapshot_download
+    snapshot_download(
+        repo_id="microsoft/table-transformer-detection",
+        local_dir="{{ model_path }}",
+        local_dir_use_symlinks=False
+    )
+    EOF
+  tags: [install, ocr]
+
+# =========================
+# STEP 4: fix permissions
+# =========================
+- name: Fix permissions for Table Transformer model
+  file:
+    path: "{{ model_path }}"
+    recurse: yes
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+  tags: [install, ocr]
+
+# =========================
+# STEP 5: delete temp venv
+# =========================
+- name: Remove temporary venv
+  file:
+    path: /tmp/tt-venv
+    state: absent
+  tags: [install, ocr]
