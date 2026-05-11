@@ -1,0 +1,11 @@
+{
+  "name": "socket-project",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {},
+  "devDependencies": {},
+  "dependencies": {
+    "socket.io": "^4.8.3"
+  }
+}

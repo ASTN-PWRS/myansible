@@ -14,3 +14,7 @@
 # LibreOffice for docx to pdf
 - import_tasks: soffice.yml
   tags: [install, share]
+
+# socketIO-client
+- import_tasks: socketio.yml
+  tags: [install, share]

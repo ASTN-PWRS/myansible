@@ -1,0 +1,70 @@
+# roles/share/tasks/socketio.yml
+---
+# 1. /srv/socket.io-client を作成
+- name: Ensure /srv/socket.io-client exists
+  become: true
+  file:
+    path: /srv/socket.io-client
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  tags: [install, share]
+
+# 2. package.json をコピー
+- name: Copy package.json for socket.io-client
+  become: true
+  copy:
+    src: "socketio/package.json"
+    dest: "/srv/socket.io-client/package.json"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  tags: [install, share]
+
+# 3. npm install
+- name: Run npm install for socket.io-client
+  become: true
+  become_user: "{{ ansible_user }}"
+  shell: |
+    export HOME="/home/{{ ansible_user }}"
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+    nvm use --lts
+
+    cd /srv/socket.io-client
+    npm install
+  args:
+    executable: /bin/bash
+  tags: [install, share]
+
+# 4. /var/www/share/socket.io を作成
+- name: Ensure /var/www/share/socket.io exists
+  become: true
+  file:
+    path: /var/www/share/socket.io
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0755"
+  tags: [install, share]
+
+# 5. client-dist を /var/www/share/socket.io にコピー
+- name: Copy built client-dist to /var/www/share/socket.io
+  become: true
+  copy:
+    src: "/srv/socket.io-client/node_modules/socket.io/client-dist/"
+    dest: "/var/www/share/socket.io/"
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0644"
+  tags: [install, share]
+
+# 6. /srv/socket.io-client を削除
+- name: Remove /srv/socket.io-client directory
+  become: true
+  file:
+    path: /srv/socket.io-client
+    state: absent
+  tags: [install, share]
