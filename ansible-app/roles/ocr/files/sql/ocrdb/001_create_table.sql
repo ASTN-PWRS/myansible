@@ -15,15 +15,14 @@ CREATE TABLE IF NOT EXISTS document_pages (
 );
 
 CREATE TABLE tasks (
-    task_id      TEXT PRIMARY KEY,
-    file_name    TEXT,
-    status       TEXT,        -- pending / processing / done / error
-    progress     INTEGER,     -- 0〜100
-    total_pages  INTEGER,
-    processed_pages INTEGER,
+    job_id        TEXT PRIMARY KEY,
+    file_name     TEXT,
+    stage         TEXT,              -- upload / ocr / embedding 
+    status        TEXT,              -- processing / error / done
+    page_number   INTEGER NOT NULL,
     error_message TEXT,
-    created_at   TIMESTAMP DEFAULT now(),
-    updated_at   TIMESTAMP DEFAULT now()
+    created_at    TIMESTAMP DEFAULT now(),
+    updated_at    TIMESTAMP DEFAULT now()
 );
 
 -- 日本語キーワード検索（pg_bigm）
