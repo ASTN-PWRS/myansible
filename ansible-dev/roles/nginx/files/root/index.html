@@ -8,21 +8,23 @@
     <link rel="stylesheet" href="/share/webawesome/webawesome.css" />
     <link rel="stylesheet" href="/share/css/fonts.css" />
     <link rel="stylesheet" href="./css/styles.css" />
+    <script src="./js/theme-toggle.js"></script>
     <style>
       .wa-stack {
   display: flex;
   flex-direction: column;
   min-height: 100vh; /* 必要なら */
 }
+
 .wa-grid {
   flex-grow: 1;
 }
-      .wa-stack > main {
+
+.wa-stack > main {
   flex-grow: 1;
   min-height: 0; /* ← これが重要 */
 }
     </style>
-    <script src="./js/theme-toggle.js"></script>
   </head>
   <body>
     <wa-page>
