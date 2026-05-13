@@ -1,0 +1,92 @@
+# roles/share/tasks/socketio.yml
+---
+# 1. /srv/share-packages を作成
+- name: Ensure /srv/share-packages exists
+  become: true
+  file:
+    path: /srv/share-packages
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  tags: [install, share]
+
+# 2. package.json をコピー
+- name: Copy package.json for socket.io-client
+  become: true
+  copy:
+    src: "socketio/package.json"
+    dest: "/srv/share-packages/package.json"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  tags: [install, share]
+
+# 3. npm install
+- name: Run npm install for socket.io-client
+  become: true
+  become_user: "{{ ansible_user }}"
+  shell: |
+    export HOME="/home/{{ ansible_user }}"
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+    nvm use --lts
+
+    cd /srv/share-packages
+    npm install
+  args:
+    executable: /bin/bash
+  tags: [install, share]
+
+# 4. /var/www/share/socket.io を作成
+- name: Ensure /var/www/share/socket.io exists
+  become: true
+  file:
+    path: /var/www/share/socket.io
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0755"
+  tags: [install, share]
+
+# 5. client-dist を /var/www/share/socket.io にコピー
+- name: Copy built client-dist to /var/www/share/socket.io
+  become: true
+  copy:
+    src: "/srv/share-packages/node_modules/socket.io/client-dist/"
+    dest: "/var/www/share/socket.io/"
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0644"
+  tags: [install, share]
+
+# 4. /var/www/share/socket.io を作成
+- name: Ensure /var/www/share/tabulator-tables exists
+  become: true
+  file:
+    path: /var/www/share/tabulator-tables
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0755"
+  tags: [install, share]
+
+# 5. dist を /var/www/share/tabulator-tables にコピー
+- name: Copy built client-dist to /var/www/share/tabulator-tables
+  become: true
+  copy:
+    src: "/srv/share-packages/node_modules/tabulator-tables/dist/"
+    dest: "/var/www/share/tabulator-tables/"
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0644"
+  tags: [install, share]
+
+# 6. /srv/share-packages を削除
+- name: Remove /srv/share-packages directory
+  become: true
+  file:
+    path: /srv/share-packages
+    state: absent
+  tags: [install, share]

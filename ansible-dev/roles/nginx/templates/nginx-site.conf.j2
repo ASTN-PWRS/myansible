@@ -5,6 +5,10 @@ server {
     root /var/www/html;
     index index.html index.php;
 
+    # バックエンドの 502/503/504 を URL を変えずに 404 ページへ
+    proxy_intercept_errors on;
+    error_page 502 503 504 =404 /error_404.html;
+
     # "/" の PHP 対応
     location / {
         try_files $uri $uri/ /index.php?$query_string;
@@ -14,10 +18,14 @@ server {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:{{ php_fpm_socket }};
         fastcgi_param SCRIPT_FILENAME $request_filename;
-        # fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        # fastcgi_param DOCUMENT_ROOT $realpath_root;
     }
 
-    # サブパスのアプリ（nginx-apps ロールが生成）
+    # サブパスのアプリ(nginx-apps ロールが生成)
     include /etc/nginx/snippets/apps.conf;
+
+    # 404 ページ(URL に出さない)
+    location = /error_404.html {
+        root /var/www/html;
+        internal;
+    }
 }

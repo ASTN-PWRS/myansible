@@ -121,6 +121,24 @@
   tags: [garnet, garnet_install, install]
 
 # ----------------------------------------
+# 12.5) Enable garnet service
+# ----------------------------------------
+- name: Enable garnet service
+  systemd:
+    name: garnet
+    enabled: yes
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
+# 12.6) Start garnet service
+# ----------------------------------------
+- name: Start garnet service
+  systemd:
+    name: garnet
+    state: started
+  tags: [garnet, garnet_install, install]
+
+# ----------------------------------------
 # 13) install redis-cli
 # ----------------------------------------
 - name: Wait for dpkg lock to be released

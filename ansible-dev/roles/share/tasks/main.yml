@@ -15,6 +15,6 @@
 - import_tasks: soffice.yml
   tags: [install, share]
 
-# socketIO-client
-- import_tasks: socketio.yml
+# share-packages
+- import_tasks: share-packages.yml
   tags: [install, share]
