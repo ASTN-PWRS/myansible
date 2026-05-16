@@ -1,4 +1,4 @@
 model_path: /opt/models/ocr
 model_owner: "{{ansible_user}}"
 model_group: "{{ansible_user}}"
-venv_path: /opt/app/venv
+venv_path: /opt/ocr/venv

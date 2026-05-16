@@ -1,0 +1,58 @@
+---
+- name: Ensure paddleocr model directory exists
+  file:
+    path: "{{ model_path }}"
+    state: directory
+    mode: "0755"
+  tags: [install, paddleocr]
+
+- name: Copy joyo kanji list
+  copy:
+    src: joyo_kanji.txt
+    dest: "{{ model_path }}/joyo_kanji.txt"
+    mode: "0644"
+  tags: [install, paddleocr]
+
+- name: Generate japanese_keys.txt
+  copy:
+    dest: "{{ model_path }}/japanese_keys.txt"
+    mode: "0644"
+    content: |
+      {% raw %}
+      {% set joyo = lookup('file', ocr_model_dir + '/joyo_kanji.txt').splitlines() %}
+
+      {# ひらがな #}
+      {% for code in range(0x3040, 0x309F + 1) %}
+      {{ chr(code) }}
+      {% endfor %}
+
+      {# カタカナ #}
+      {% for code in range(0x30A0, 0x30FF + 1) %}
+      {{ chr(code) }}
+      {% endfor %}
+
+      {# 全角英数字 #}
+      {% for code in range(0xFF00, 0xFFEF + 1) %}
+      {{ chr(code) }}
+      {% endfor %}
+
+      {# 半角英数字 #}
+      {% for code in range(0x30, 0x39 + 1) %}
+      {{ chr(code) }}
+      {% endfor %}
+      {% for code in range(0x41, 0x5A + 1) %}
+      {{ chr(code) }}
+      {% endfor %}
+      {% for code in range(0x61, 0x7A + 1) %}
+      {{ chr(code) }}
+      {% endfor %}
+
+      {# 記号 #}
+      。 、 ， ． ！ ？ ： ； … ‥ ー — 〜 ・ 「 」 『 』 （ ） ［ ］ ｛ ｝ 〈 〉 《 》 ／ ＼ ＋ − ＝ ＊ ％ ＃ ＆ ＠ ￥ ° → ← ↑ ↓
+
+      {# 常用漢字 #}
+      {% for c in joyo %}
+      {{ c }}
+      {% endfor %}
+      {% endraw %}
+  tags: [install, paddleocr]

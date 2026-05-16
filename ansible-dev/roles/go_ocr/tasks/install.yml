@@ -1,0 +1,36 @@
+---
+# roles/go_ocr/tasks/install.yml
+
+- name: Ensure Go is installed
+  ansible.builtin.apt:
+    name: golang
+    state: present
+  become: true
+  tags: [install]
+- name: Ensure go-ocr directory exists
+  ansible.builtin.file:
+    path: "{{ go_ocr_app_path }}"
+    state: directory
+    mode: "0755"
+  tags: [install]
+
+- name: Copy Go OCR binary
+  ansible.builtin.copy:
+    src: go-ocr
+    dest: "{{ go_ocr_app_path }}/go-ocr"
+    mode: "0755"
+  tags: [install]
+
+- name: Ensure model directory exists
+  ansible.builtin.file:
+    path: "{{ go_ocr_app_path }}/models"
+    state: directory
+    mode: "0755"
+  tags: [install]
+
+- name: Copy OCR model files
+  ansible.builtin.copy:
+    src: "models/"
+    dest: "{{ go_ocr_app_path }}/models/"
+    mode: "0644"
+  tags: [install]

@@ -1,0 +1,59 @@
+# =========================
+# STEP 0: create model dir
+# =========================
+- name: Ensure OCR model base directory exists
+  file:
+    path: "{{ model_path }}"
+    state: directory
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+    mode: "0755"
+  tags: [install, paddleocr]
+
+- name: Create main venv for OCR
+  command: >
+    /root/.local/bin/uv venv {{ venv_path }} --python 3.13
+  args:
+    creates: "{{ venv_path }}/bin/python"
+  tags: [install, paddleocr]
+
+# =========================
+# STEP 1: install paddle stack into /opt/ocr/venv
+# =========================
+- name: Install PaddleOCR stack into main venv
+  command: >
+    /root/.local/bin/uv pip install
+    --python {{ venv_path }}/bin/python
+    paddleocr==3.5.0
+    paddlepaddle==3.0.0
+    paddlex==3.5.1
+  args:
+    creates: "{{ venv_path }}/lib/python3.13/site-packages/paddleocr"
+  tags: [install, paddleocr]
+
+# =========================
+# STEP 2: warmup (download models)
+# =========================
+- name: Warmup PaddleOCR model (download into model_path)
+  shell: |
+    export PADDLE_PDX_CACHE_HOME="{{ model_path }}"
+
+    {{ venv_path }}/bin/python - << 'EOF'
+    from paddleocr import PaddleOCR
+    ocr = PaddleOCR(use_textline_orientation=True, lang="japan")
+    ocr.predict([[0,0],[10,10]])
+    EOF
+  environment:
+    PADDLE_PDX_CACHE_HOME: "{{ model_path }}"
+  tags: [install, paddleocr]
+
+# =========================
+# STEP 3: fix permissions
+# =========================
+- name: Fix permissions
+  file:
+    path: "{{ model_path }}"
+    recurse: yes
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+  tags: [install, paddleocr]
