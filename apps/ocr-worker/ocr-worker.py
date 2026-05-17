@@ -110,8 +110,6 @@ def main():
         image_files = pdf_to_images(pdf_path, out_dir)
         total = len(image_files)
 
-        r.hset(f"task:{task_id}", "total_pages", total)
-
         # 各ページ OCR
         for i, img_path in enumerate(image_files):
             text, text_hash = run_ocr(ocr_engine, img_path)

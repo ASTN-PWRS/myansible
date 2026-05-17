@@ -1,0 +1,23 @@
+---
+- name: composer install
+  ansible.builtin.shell: |
+    /usr/local/bin/composer install --no-dev --optimize-autoloader
+  args:
+    chdir: "/srv/www/portal"
+
+- name: npm install
+  ansible.builtin.shell: |
+    npm install
+  args:
+    chdir: "/srv/www/portal"
+
+- name: npm build
+  ansible.builtin.shell: |
+    npm run build
+  args:
+    chdir: "/srv/www/portal"
+
+- name: reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded

@@ -1,0 +1,12 @@
+# Portal Slim4 app
+location /portal/ {
+    alias /srv/www/portal/public/;
+
+    try_files $uri $uri/ /portal/index.php?$query_string;
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $request_filename;
+    }
+}

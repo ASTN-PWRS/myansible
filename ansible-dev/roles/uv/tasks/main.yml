@@ -35,7 +35,7 @@
   become: yes
   become_user: "{{ ansible_user }}"
   shell: |
-    /usr/local/bin/uv self --version
+    /usr/local/bin/uv --version
   args:
     creates: "/home/{{ ansible_user }}/.local/share/uv/python"
   tags: [install]

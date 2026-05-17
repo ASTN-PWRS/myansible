@@ -8,6 +8,7 @@
     - nginx # nginx install
     - composer # composer install
     - python # python + uv
+    - uv # ユーザ用uv
     - postgresql # PostgreSQL install + config + backup
     - postgresql_pg_bigm # pg_bigm
     - garnet # Garnet

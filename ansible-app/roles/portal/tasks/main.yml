@@ -1,0 +1,32 @@
+---
+# 1. /srv/www/portal を作成
+- name: Ensure /srv/www/portal exists
+  ansible.builtin.file:
+    path: "/srv/www/portal"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+# 2. プロジェクトをコピー
+- name: Sync portal project to /srv/www/portal
+  ansible.builtin.copy:
+    src: "/home/{{ ansible_user }}/portal/"
+    dest: "/srv/www/portal/"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify:
+    - composer install
+    - npm install
+    - npm build
+
+# 3. apps.conf に portal の location を配置
+- name: Deploy portal nginx config into apps.conf
+  ansible.builtin.template:
+    src: "portal.conf.j2"
+    dest: "/etc/nginx/snippets/apps.conf"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  notify: reload nginx
