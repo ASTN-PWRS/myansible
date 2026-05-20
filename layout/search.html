@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja" class="wa-theme-default">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>vite-project</title>
+    <link rel="stylesheet" type="text/css" href="/webawesome/webawesome.css" />
+    <link rel="stylesheet" type="text/css" href="/webawesome/default.css" />
+    <link rel="stylesheet" type="text/css" href="/styles.css" />
+  </head>
+  <body>
+    <wa-page class="wa-stack">
+      <div class="wa-stack">
+        <header class="wa-split" slot="header">
+          <div class="wa-cluster" style="height: 2rem">
+            <wa-icon name="hat-wizard" style="color: mediumpurple"></wa-icon>
+            <span id="brand-name" class="wa-heading-m wa-desktop-only"
+              >Test Worldwide</span
+            >
+          </div>
+        </header>
+        <!-- <nav slot="navigation-header">
+          <div class="wa-flank">
+            <div class="wa-stack wa-gap-3xs">
+              <span class="wa-heading-m">Great Horned Owl</span>
+            </div>
+          </div>
+        </nav> -->
+        <!-- <nav slot="navigation">
+        <a href="#identification">Identification</a>
+        <a href="#range">Range and Habitat</a>
+        <a href="#behavior">Behavior</a>
+        <a href="#conservation">Conservation</a>
+      </nav> -->
+        <main class="wa-stack">
+          <div class="wa-justify-content-center wa-align-items-center">
+            <div>test</div>
+
+            <wa-button id="btn" appearance="filled">Open Dialog</wa-button>
+            <wa-button-group label="Alignment">
+              <wa-button appearance="filled">1</wa-button>
+              <wa-button appearance="filled">2</wa-button>
+              <wa-button appearance="filled">3</wa-button>
+              <wa-button appearance="filled" disabled>...</wa-button>
+            </wa-button-group>
+          </div>
+        </main>
+        <footer slot="footer">© 2026</footer>
+      </div>
+    </wa-page>
+    <wa-dialog label="Dialog" id="dialog-overview" style="--width: 90vw">
+      <div class="wa-grid">
+        <div style="height: 70vh; border: 1px solid red; overflow-y: auto">
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+          aa<br />
+        </div>
+        <div id="imageview" style="height: 70vh; border: 1px solid red">
+          <div id="panzoom-wrap"></div>
+        </div>
+      </div>
+    </wa-dialog>
+
+    <script>
+      const dialog = document.querySelector("#dialog-overview");
+      const btn = document.querySelector("#btn");
+
+      btn.addEventListener("click", () => (dialog.open = true));
+    </script>
+
+    <script src="/webawesome/webawesome.js"></script>
+    <script type="module">
+      import { loadImageToView } from "/src/stub.js";
+      loadImageToView("/zako.webp");
+    </script>
+  </body>
+</html>

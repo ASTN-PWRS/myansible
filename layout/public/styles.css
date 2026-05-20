@@ -1,0 +1,61 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+wa-page::part(base) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+wa-page[view="desktop"] {
+  [slot*="navigation"] {
+    border-inline-end: var(--wa-border-width-s) var(--wa-border-style)
+      var(--wa-color-surface-border);
+  }
+}
+
+wa-dialog::part(body) {
+  overflow-y: hidden;
+}
+
+/* main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--wa-color-surface-lowered);
+  gap: 10px;
+} */
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 10px;
+  background-color: light-dark(
+    var(--wa-color-brand-60),
+    var(--wa-color-brand-05)
+  );
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 10px;
+  background-color: light-dark(
+    var(--wa-color-brand-60),
+    var(--wa-color-brand-05)
+  );
+}
+
+#panzoom-wrap {
+  width: inherit;
+  height: inherit;
+  position: relative;
+  border: 1px solid green;
+}
