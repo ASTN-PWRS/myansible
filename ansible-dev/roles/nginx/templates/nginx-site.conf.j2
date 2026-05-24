@@ -5,9 +5,12 @@ server {
     root /var/www/html;
     index index.html index.php;
 
-    # バックエンドの 502/503/504 を URL を変えずに 404 ページへ
+    # バックエンドの 502/503/504 → custom 404
     proxy_intercept_errors on;
     error_page 502 503 504 =404 /error_404.html;
+
+    # 通常の 404 も custom にする
+    error_page 404 /error_404.html;
 
     # "/" の PHP 対応
     location / {
@@ -23,9 +26,8 @@ server {
     # サブパスのアプリ(nginx-apps ロールが生成)
     include /etc/nginx/snippets/apps.conf;
 
-    # 404 ページ(URL に出さない)
+    # 404 ページ（URL に出さない）
     location = /error_404.html {
-        root /var/www/html;
         internal;
     }
 }
