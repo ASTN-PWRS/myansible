@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -euo pipefail
+
+BIN="/opt/embed/embed-binary"
+ENV="/opt/embed/embed.env"
+LOG="/opt/embed/embed.log"
+
+# --- 1. バイナリ存在チェック ---
+if [[ ! -x "$BIN" ]]; then
+  echo "ERROR: embed-binary not found or not executable: $BIN" >&2
+  exit 100
+fi
+
+# --- 2. 標準入力チェック ---
+if [[ -t 0 ]]; then
+  echo "ERROR: No input provided to emb.sh (stdin is empty)" >&2
+  exit 101
+fi
+
+# --- 3. 環境変数ロード（存在しなくてもOK） ---
+if [[ -f "$ENV" ]]; then
+  source "$ENV"
+fi
+
+# --- 4. 実行（エラーはログに残す） ---
+{
+  exec "$BIN"
+} 2>>"$LOG"

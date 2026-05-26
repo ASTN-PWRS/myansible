@@ -1,0 +1,111 @@
+- name: Ensure build directory exists
+  become: yes
+  ansible.builtin.file:
+    path: /opt/embed/build
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Remove old venv
+  become: yes
+  ansible.builtin.file:
+    path: /opt/embed/build/.venv
+    state: absent
+
+- name: Sync embed source project
+  become: yes
+  ansible.builtin.copy:
+    src: embed-src/
+    dest: /opt/embed/build/
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: preserve
+
+- name: Install build dependencies
+  become: yes
+  ansible.builtin.apt:
+    name:
+      - build-essential
+    state: present
+    update_cache: yes
+
+- name: Ensure cache directories exist
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  loop:
+    - /opt/embed/.cache
+    - /opt/embed/.cache/uv
+    - /opt/embed/.cache/huggingface
+
+- name: Sync project dependencies
+  become: yes
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+
+    cd /opt/embed/build
+
+    export HOME="/home/{{ ansible_user }}"
+    export UV_CACHE_DIR="/opt/embed/.cache/uv"
+
+    uv sync
+  args:
+    executable: /bin/bash
+
+- name: Install pyinstaller into project venv
+  become: yes
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+
+    cd /opt/embed/build
+
+    export HOME="/home/{{ ansible_user }}"
+    export UV_CACHE_DIR="/opt/embed/.cache/uv"
+
+    uv add --dev pyinstaller
+  args:
+    executable: /bin/bash
+
+- name: Build standalone embed CLI binary
+  become: yes
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+
+    cd /opt/embed/build
+
+    export HOME="/home/{{ ansible_user }}"
+    export UV_CACHE_DIR="/opt/embed/.cache/uv"
+
+    uv run pyinstaller \
+      --clean \
+      --onefile \
+      --name embed-binary \
+      src/embed/cli.py
+  args:
+    executable: /bin/bash
+    creates: /opt/embed/build/dist/embed-binary
+
+- name: Install embed-binary
+  become: yes
+  ansible.builtin.copy:
+    src: /opt/embed/build/dist/embed-binary
+    dest: /usr/local/bin/embed-binary
+    remote_src: yes
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure embedding model readable by all users
+  become: yes
+  ansible.builtin.file:
+    path: /opt/models/bge-m3
+    recurse: yes
+    mode: "a+rX"
