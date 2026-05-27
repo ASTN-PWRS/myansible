@@ -11,6 +11,7 @@
 
     <link rel="stylesheet" href="/webawesome/default.css" />
     <link rel="stylesheet" href="/webawesome/webawesome.css" />
+    <script src="/src/humburger-menu.js"></script>
     <style>
       html,
       body {
@@ -174,30 +175,20 @@
         "
         class="open"
       >
-        <wa-divider style="margin: 0px"></wa-divider>
-        <wa-button
-          appearance="plain"
-          variant="neutral"
-          size="m"
-          style="width: 100%"
-          href="#identification"
-          >Identification</wa-button
-        >
-        <wa-divider style="margin: 0px"></wa-divider>
+        <wa-dropdown-item>
+          <wa-icon slot="icon" name="scissors"></wa-icon>
+          Cut
+        </wa-dropdown-item>
+        <wa-dropdown-item>
+          <wa-icon slot="icon" name="copy"></wa-icon>
+          Copy
+        </wa-dropdown-item>
 
-        <wa-button
-          appearance="plain"
-          variant="neutral"
-          size="m"
-          style="width: 100%; text-align: left"
-          href="#identification"
-          >Identification</wa-button
-        >
         <wa-divider style="margin: 0px"></wa-divider>
       </nav>
 
       <!-- HEADER -->
-      <header slot="header" class="wa-split wa-container">
+      <header slot="header" class="wa-split">
         <div class="wa-cluster">
           <button class="menu-trigger normal">
             <span></span>
@@ -206,6 +197,7 @@
           </button>
           <span class="wa-heading-m"> Test Worldwide </span>
         </div>
+        <humburger-menu normal active></humburger-menu>
       </header>
 
       <!-- MAIN -->
@@ -228,7 +220,7 @@
       </main>
 
       <!-- FOOTER -->
-      <footer slot="footer" class="wa-split wa-container">
+      <footer slot="footer">
         <div class="wa-cluster">© 2026</div>
       </footer>
     </wa-page>
