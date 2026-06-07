@@ -1,0 +1,76 @@
+npm install htmx.org
+
+
+TABLE jobs
+-----------------------------------------
+id               BIGSERIAL PRIMARY KEY
+file_name        TEXT NOT NULL
+file_hash        TEXT
+status           TEXT NOT NULL  -- pending / processing / done / error
+created_at       TIMESTAMP DEFAULT now()
+updated_at       TIMESTAMP DEFAULT now()
+
+
+TABLE job_workers
+-----------------------------------------
+id               BIGSERIAL PRIMARY KEY
+job_id           BIGINT REFERENCES jobs(id)
+worker_name      TEXT NOT NULL  -- "ocr", "embedding", etc
+queue_name       TEXT NOT NULL  -- queue:ocr / queue:embedding
+status           TEXT NOT NULL  -- pending / running / done / error
+retry_count      INTEGER DEFAULT 0
+started_at       TIMESTAMP
+finished_at      TIMESTAMP
+error_message    TEXT
+updated_at       TIMESTAMP DEFAULT now()
+
+1. worker（Python）が job_workers を更新して NOTIFY を送る
+
+def update_worker_status(job_id, worker, status, error=None):
+    sql = """
+        UPDATE job_workers
+        SET status = %s,
+            error_message = %s,
+            updated_at = now(),
+            started_at = CASE WHEN %s = 'running' THEN now() ELSE started_at END,
+            finished_at = CASE WHEN %s = 'done' THEN now() ELSE finished_at END
+        WHERE job_id = %s AND worker_name = %s
+    """
+    db.execute(sql, (status, error, status, status, job_id, worker))
+
+    # PostgreSQL に通知
+    db.execute("NOTIFY job_update, %s", (str(job_id),))
+
+
+2. Node.js が PostgreSQL の LISTEN を受け取る
+import pkg from "pg";
+const { Client } = pkg;
+
+const pg = new Client({
+  connectionString: process.env.DATABASE_URL
+});
+
+await pg.connect();
+await pg.query("LISTEN job_update");
+
+pg.on("notification", (msg) => {
+  const jobId = msg.payload;
+  io.emit("job_update", { job_id: jobId });
+});
+
+3. ブラウザ側（Socket.IO）が push を受け取る
+<script>
+socket.on("job_update", (data) => {
+  const id = data.job_id;
+  htmx.trigger(`#job-${id}`, "refresh");
+});
+</script>
+
+4. htmx が refresh イベントで部分更新
+<div id="job-{{ job.id }}"
+     hx-get="/jobs/{{ job.id }}/partial"
+     hx-trigger="refresh"
+     hx-target="#job-{{ job.id }}"
+     hx-swap="outerHTML">
+</div>
+
