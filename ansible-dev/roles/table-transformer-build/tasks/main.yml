@@ -3,7 +3,7 @@
 # =========================
 - name: Ensure Table Transformer model base directory exists
   file:
-    path: "{{ model_path }}"
+    path: "{{ table_model_path }}"
     state: directory
     owner: "{{ model_owner }}"
     group: "{{ model_group }}"
@@ -36,15 +36,15 @@
   tags: [install, ocr]
 
 # =========================
-# STEP 3: warmup (download HF model into model_path)
+# STEP 3: warmup (download HF model into table_model_path)
 # =========================
-- name: Warmup Table Transformer model (download into model_path)
+- name: Warmup Table Transformer model (download into table_model_path)
   shell: |
     /tmp/tt-venv/bin/python - << 'EOF'
     from huggingface_hub import snapshot_download
     snapshot_download(
         repo_id="microsoft/table-transformer-detection",
-        local_dir="{{ model_path }}",
+        local_dir="{{ table_model_path }}",
         local_dir_use_symlinks=False
     )
     EOF
@@ -55,7 +55,7 @@
 # =========================
 - name: Fix permissions for Table Transformer model
   file:
-    path: "{{ model_path }}"
+    path: "{{ table_model_path }}"
     recurse: yes
     owner: "{{ model_owner }}"
     group: "{{ model_group }}"

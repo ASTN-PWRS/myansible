@@ -1,0 +1,327 @@
+<!doctype html>
+<html
+  lang="ja"
+  class="wa-theme-default wa-palette-default wa-brand-blue wa-dark"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Web Awesome Layout</title>
+
+    <link rel="stylesheet" href="/webawesome/default.css" />
+    <link rel="stylesheet" href="/webawesome/webawesome.css" />
+    <script src="/src/humburger-menu.js"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden; /* ← ブラウザのスクロールバーを完全に消す */
+      }
+
+      body {
+        height: 100vh;
+      }
+
+      wa-page {
+        height: 100vh;
+      }
+
+      /* Shadow DOM root */
+      wa-page::part(base) {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
+
+      /* body 部分 */
+      wa-page::part(body) {
+        flex: 1;
+
+        min-height: 0;
+      }
+
+      /* main */
+      main {
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+        display: flex;
+      }
+
+      header {
+        background: var(--wa-color-brand);
+      }
+
+      footer {
+        background: var(--wa-color-brand);
+        height: 10px;
+        padding-top: 0rem;
+      }
+
+      #inner {
+        overflow-y: auto;
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap; /* ← これが折り返し */
+        gap: 0.5em; /* 要素間の余白（任意） */
+        width: 100%;
+        padding: 1em;
+        flex-direction: column;
+        justify-content: start;
+        align-items: start;
+        overflow-y: auto;
+      }
+
+      #inner::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      #inner::-webkit-scrollbar-track {
+        background: #f0f0f0;
+      }
+
+      #inner::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+      }
+
+      #inner::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
+      /* 基本（menu05 の元サイズ） */
+      .menu-trigger,
+      .menu-trigger span {
+        display: inline-block;
+        box-sizing: border-box;
+      }
+
+      .menu-trigger {
+        --scale: 1; /* デフォルト normal */
+
+        position: relative;
+        width: 50px;
+        height: 44px;
+        background: none;
+        border: none;
+        appearance: none;
+        cursor: pointer;
+        transition: 0.6s cubic-bezier(0.68, -0.5, 0.32, 1.6);
+        transform: scale(var(--scale));
+        transform-origin: center center;
+      }
+
+      .menu-trigger span {
+        position: absolute;
+        width: 100%;
+        height: 4px;
+        background: #fff;
+        border-radius: 4px;
+        transition: 0.3s 0.2s;
+      }
+
+      /* 3本線の位置（元のまま） */
+      .menu-trigger span:nth-of-type(1) {
+        top: 0;
+        left: 0;
+      }
+      .menu-trigger span:nth-of-type(2) {
+        top: 20px;
+        left: 0;
+      }
+      .menu-trigger span:nth-of-type(3) {
+        bottom: 0;
+        left: 0;
+      }
+
+      /* active 時（元の menu05 と同じ動き） */
+      .menu-trigger.active {
+        transform: scale(var(--scale)) rotate(180deg);
+      }
+
+      .menu-trigger.active span:nth-of-type(1) {
+        transform: translateY(20px) rotate(-45deg);
+      }
+
+      .menu-trigger.active span:nth-of-type(2) {
+        transform: translateY(0) rotate(45deg);
+      }
+
+      .menu-trigger.active span:nth-of-type(3) {
+        opacity: 0;
+      }
+
+      /* サイズバリエーション（scale だけ変更） */
+      .menu-trigger.small {
+        --scale: 0.3;
+      }
+
+      .menu-trigger.normal {
+        --scale: 0.5; /* デフォルト */
+      }
+
+      .menu-trigger.large {
+        --scale: 1;
+      }
+      nav {
+        width: 0;
+        display: none;
+        overflow: hidden;
+        transition: width 0.3s ease;
+      }
+
+      /* 開いている状態 */
+      nav.open {
+        width: 250px; /* 好きな幅 */
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body>
+    <wa-page>
+      <!-- <nav
+        slot="navigation-header"
+        style="border-right: 0.5px solid grey; border-bottom: 0.5px solid grey"
+      >
+        <div class="wa-flank">
+          <div class="wa-stack wa-gap-3xs">
+            <span class="wa-heading-m">Great Horned Owl</span>
+          </div>
+        </div>
+      </nav> -->
+
+      <nav
+        slot="menu"
+        style="
+          border-right: 0.5px solid var(--wa-color-neutral-border-quiet);
+          padding-left: 0;
+          padding-right: 0;
+          height: 100%;
+        "
+        class="open"
+      >
+        <wa-dropdown-item>
+          <wa-icon slot="icon" name="scissors"></wa-icon>
+          Cut
+        </wa-dropdown-item>
+        <wa-dropdown-item>
+          <wa-icon slot="icon" name="copy"></wa-icon>
+          Copy
+        </wa-dropdown-item>
+
+        <wa-divider style="margin: 0px"></wa-divider>
+      </nav>
+
+      <!-- HEADER -->
+      <header slot="header" class="wa-split">
+        <div class="wa-cluster">
+          <button class="menu-trigger normal">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <span class="wa-heading-m"> Test Worldwide </span>
+        </div>
+        <humburger-menu normal active></humburger-menu>
+      </header>
+
+      <!-- MAIN -->
+      <main>
+        <div id="inner">
+          <wa-card style="display: flex; width: 400px; height: 200px">
+            <div style="padding: 2rem">Drop</div>
+          </wa-card>
+          <wa-textarea
+            resize="auto"
+            rows="6"
+            apperance="outlined"
+            placeholder="検索条件を入力してください"
+          ></wa-textarea>
+          <div class="wa-stack">
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+          </div>
+        </div>
+      </main>
+
+      <!-- FOOTER -->
+      <footer slot="footer">
+        <div class="wa-cluster">© 2026</div>
+      </footer>
+    </wa-page>
+    <script src="/webawesome/webawesome.js"></script>
+    <script>
+      document.querySelectorAll(".menu-trigger").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          btn.classList.toggle("active");
+          const nav = document.querySelector("nav");
+          const isOpen = nav.classList.contains("open");
+          if (isOpen) {
+            // --- 閉じる動作 ---
+            // 1. width を 0 にする
+            nav.style.width = "0px";
+
+            // 2. アニメ終了後に display:none
+            nav.addEventListener(
+              "transitionend",
+              () => {
+                nav.style.display = "none";
+                nav.classList.remove("open");
+              },
+              { once: true },
+            );
+          } else {
+            // --- 開く動作 ---
+            // 1. display:block にして width を 0 にセット
+            nav.style.display = "block";
+            nav.style.width = "0px";
+            // 2. 次のフレームで open クラスを付けて width を 250px に
+            requestAnimationFrame(() => {
+              nav.classList.add("open");
+              nav.style.width = "250px";
+            });
+          }
+        });
+        const main = document.querySelector("main");
+        const inner = document.getElementById("inner");
+
+        const ro = new ResizeObserver((entries) => {
+          const h = entries[0].contentRect.height;
+          inner.style.height = `${h - 5}px`;
+        });
+
+        ro.observe(main);
+      });
+    </script>
+  </body>
+</html>

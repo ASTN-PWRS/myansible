@@ -1,4 +1,9 @@
 ---
+- name: Install poppler-utils
+  apt:
+    name: poppler-utils
+    state: present
+
 - name: Ensure venv exists
   command: "/root/.local/bin/uv venv /opt/{{ app_name }}/venv"
   args:

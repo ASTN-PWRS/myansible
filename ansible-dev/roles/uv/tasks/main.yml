@@ -4,7 +4,7 @@
 
 - name: Ensure /usr/local/bin exists
   become: yes
-  file:
+  ansible.builtin.file:
     path: /usr/local/bin
     state: directory
     mode: "0755"
@@ -12,7 +12,7 @@
 
 - name: Copy uv binary for user access
   become: yes
-  copy:
+  ansible.builtin.copy:
     src: /root/.local/bin/uv
     dest: /usr/local/bin/uv
     mode: "0755"
@@ -20,22 +20,98 @@
   tags: [install]
 
 - name: Verify user uv installed
-  stat:
+  ansible.builtin.stat:
     path: /usr/local/bin/uv
   register: user_uv_stat
   tags: [install]
 
 - name: Fail if user uv not installed
-  fail:
+  ansible.builtin.fail:
     msg: "User uv binary was not installed correctly"
   when: not user_uv_stat.stat.exists
   tags: [install]
 
-- name: Initialize uv runtime for {{ ansible_user }}
+# ============================
+# Python 3.13 をユーザ環境へインストール
+# ============================
+
+- name: Install Python 3.13 via uv
   become: yes
   become_user: "{{ ansible_user }}"
-  shell: |
-    /usr/local/bin/uv --version
+  ansible.builtin.shell: |
+    export HOME="/home/{{ ansible_user }}"
+    /usr/local/bin/uv python install 3.13
   args:
-    creates: "/home/{{ ansible_user }}/.local/share/uv/python"
+    executable: /bin/bash
+  tags: [install]
+
+- name: Verify Python 3.13
+  become: yes
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.shell: |
+    export HOME="/home/{{ ansible_user }}"
+    /usr/local/bin/uv run --python 3.13 python --version
+  args:
+    executable: /bin/bash
+  register: pyver
+  changed_when: false
+  tags: [install]
+
+- name: Show Python version
+  ansible.builtin.debug:
+    var: pyver.stdout
+  tags: [install]
+
+# ============================
+# uv 管理 Python 3.13 を検索
+# ============================
+
+- name: Find uv python3.13 binary
+  become: yes
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.shell: |
+    export HOME="/home/{{ ansible_user }}"
+    find "$HOME/.local/share/uv/python" \
+      -type f \
+      -path "*/bin/python3.13" \
+      | head -1
+  args:
+    executable: /bin/bash
+  register: uv_python
+  changed_when: false
+  tags: [install]
+
+- name: Fail if uv python not found
+  ansible.builtin.fail:
+    msg: "python3.13 was not installed by uv"
+  when: uv_python.stdout == ""
+  tags: [install]
+
+# ============================
+# 全ユーザ利用用シンボリックリンク
+# ============================
+
+- name: Create python3.13 symlink
+  become: yes
+  ansible.builtin.file:
+    src: "{{ uv_python.stdout }}"
+    dest: /usr/local/bin/python3.13
+    state: link
+    force: yes
+  tags: [install]
+
+# ============================
+# 動作確認
+# ============================
+
+- name: Verify system python3.13
+  become: yes
+  ansible.builtin.command: /usr/local/bin/python3.13 --version
+  register: python313_version
+  changed_when: false
+  tags: [install]
+
+- name: Show installed python3.13
+  ansible.builtin.debug:
+    var: python313_version.stdout
   tags: [install]

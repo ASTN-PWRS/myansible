@@ -1,0 +1,138 @@
+# ============================================
+# 0. Ensure model directory
+# ============================================
+- name: Ensure PaddleOCR model directory exists
+  file:
+    path: "{{ paddle_ocr_model_path }}"
+    state: directory
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+    mode: "0755"
+  tags: [install, paddleocr]
+
+# ============================================
+# 1. Ensure build directory
+# ============================================
+- name: Ensure build directory exists
+  file:
+    path: /opt/paddleocr-cli/build
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  tags: [install, paddleocr]
+
+# ============================================
+# 2. Remove old artifacts
+# ============================================
+- name: Remove old paddleocr binary
+  file:
+    path: /opt/paddleocr-cli/build/paddleocr
+    state: absent
+  tags: [install, paddleocr]
+
+- name: Remove old venv
+  file:
+    path: /opt/paddleocr-cli/build/.venv
+    state: absent
+  tags: [install, paddleocr]
+
+# ============================================
+# 3. Sync source project
+# ============================================
+- name: Sync paddleocr-cli source project
+  copy:
+    src: paddleocr-cli-src/
+    dest: /opt/paddleocr-cli/build/
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: preserve
+  tags: [install, paddleocr]
+
+# ============================================
+# 4. Install pipx
+# ============================================
+- name: Install pipx
+  apt:
+    name: pipx
+    state: present
+    update_cache: yes
+  tags: [install, paddleocr]
+
+# ============================================
+# 5. Ensure cache directories
+# ============================================
+- name: Ensure cache directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  loop:
+    - /opt/paddleocr-cli/.cache
+    - /opt/paddleocr-cli/.cache/pip
+    - /opt/paddleocr-cli/.cache/pex
+  tags: [install, paddleocr]
+
+# ============================================
+# 6. Find uv python3.13
+# ============================================
+- name: Find uv python3.13
+  become_user: "{{ ansible_user }}"
+  shell: |
+    export HOME="/home/{{ ansible_user }}"
+    uv python find 3.13
+  args:
+    executable: /bin/bash
+  register: uv_python
+  changed_when: false
+  tags: [install, paddleocr]
+
+# ============================================
+# 8. Build paddleocr CLI via pex (SCIE lazy)
+# ============================================
+- name: Build paddleocr binary
+  become_user: "{{ ansible_user }}"
+  shell: |
+    set -euo pipefail
+
+    cd /opt/paddleocr-cli/build
+
+    export HOME="/home/{{ ansible_user }}"
+    export PIP_CACHE_DIR="/opt/paddleocr-cli/.cache/pip"
+    export PEX_ROOT="/opt/paddleocr-cli/.cache/pex"
+
+    pipx run pex \
+      --python "{{ uv_python.stdout }}" \
+      . \
+      -e paddleocr_cli.cli:main \
+      --scie lazy \
+      -o paddleocr
+  args:
+    executable: /bin/bash
+  tags: [install, paddleocr]
+
+# ============================================
+# 9. Install binary
+# ============================================
+- name: Install paddleocr binary
+  copy:
+    src: /opt/paddleocr-cli/build/paddleocr
+    dest: /usr/local/bin/paddleocr
+    remote_src: yes
+    owner: root
+    group: root
+    mode: "0755"
+  tags: [install, paddleocr]
+
+# ============================================
+# 10. Fix permissions
+# ============================================
+- name: Fix permissions for model directory
+  file:
+    path: "{{ paddle_ocr_model_path }}"
+    recurse: yes
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+  tags: [install, paddleocr]

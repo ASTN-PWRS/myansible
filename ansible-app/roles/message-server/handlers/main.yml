@@ -1,0 +1,13 @@
+---
+- name: Restart message-server
+  become: true
+  systemd:
+    name: message-server
+    state: restarted
+    enabled: yes
+
+- name: Reload nginx
+  become: true
+  service:
+    name: nginx
+    state: reloaded

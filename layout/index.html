@@ -9,8 +9,11 @@
 
     <title>Web Awesome Layout</title>
 
-    <link rel="stylesheet" href="/webawesome/default.css" />
-    <link rel="stylesheet" href="/webawesome/webawesome.css" />
+    <!-- ★ Web Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://ka-f.webawesome.com/webawesome@3.7.0/styles/webawesome.css"
+    />
     <script src="/src/humburger-menu.js"></script>
     <style>
       html,
@@ -45,13 +48,10 @@
 
       /* main */
       main {
-        height: 100%;
+        height: 86%;
         min-height: 0;
         padding: 0;
         display: flex;
-        overflow-y: auto;
-        justify-content: center;
-        align-items: center;
       }
 
       header {
@@ -60,7 +60,39 @@
 
       footer {
         background: var(--wa-color-brand);
-        padding: 1rem;
+        height: 44px !important;
+      }
+
+      #inner {
+        overflow-y: auto;
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap; /* ← これが折り返し */
+        gap: 0.5em; /* 要素間の余白（任意） */
+        width: 100%;
+        height: 100%;
+        padding: 1em;
+        flex-direction: column;
+        justify-content: start;
+        align-items: start;
+        overflow-y: auto;
+      }
+
+      #inner::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      #inner::-webkit-scrollbar-track {
+        background: #f0f0f0;
+      }
+
+      #inner::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+      }
+
+      #inner::-webkit-scrollbar-thumb:hover {
+        background: #555;
       }
 
       /* 基本（menu05 の元サイズ） */
@@ -165,28 +197,6 @@
         </div>
       </nav> -->
 
-      <nav
-        slot="menu"
-        style="
-          border-right: 0.5px solid var(--wa-color-neutral-border-quiet);
-          padding-left: 0;
-          padding-right: 0;
-          height: 100%;
-        "
-        class="open"
-      >
-        <wa-dropdown-item>
-          <wa-icon slot="icon" name="scissors"></wa-icon>
-          Cut
-        </wa-dropdown-item>
-        <wa-dropdown-item>
-          <wa-icon slot="icon" name="copy"></wa-icon>
-          Copy
-        </wa-dropdown-item>
-
-        <wa-divider style="margin: 0px"></wa-divider>
-      </nav>
-
       <!-- HEADER -->
       <header slot="header" class="wa-split">
         <div class="wa-cluster">
@@ -202,29 +212,55 @@
 
       <!-- MAIN -->
       <main>
-        <div
-          style="
-            height: 100%;
-            width: 100%;
-            padding: 1em;
-            display: flex;
-            flex-direction: column;
-            justify-content: start;
-            align-items: start;
-          "
-        >
+        <div id="inner">
           <wa-card style="display: flex; width: 400px; height: 200px">
             <div style="padding: 2rem">Drop</div>
           </wa-card>
+          <wa-textarea
+            resize="auto"
+            rows="6"
+            apperance="outlined"
+            placeholder="検索条件を入力してください"
+          ></wa-textarea>
+          <div class="wa-stack">
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+            <div>aa</div>
+          </div>
         </div>
       </main>
 
       <!-- FOOTER -->
       <footer slot="footer">
-        <div class="wa-cluster">© 2026</div>
+        <div class="wa-cluster" style="padding: 10px">© 2026</div>
       </footer>
     </wa-page>
-    <script src="/webawesome/webawesome.js"></script>
+
     <script>
       document.querySelectorAll(".menu-trigger").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -257,7 +293,20 @@
             });
           }
         });
+        const main = document.querySelector("main");
+        const inner = document.getElementById("inner");
+
+        const ro = new ResizeObserver((entries) => {
+          const h = entries[0].contentRect.height;
+          inner.style.height = `${h - 5}px`;
+        });
+
+        //ro.observe(main);
       });
     </script>
+    <script
+      type="module"
+      src="https://ka-f.webawesome.com/webawesome@3.7.0/webawesome.esm.js"
+    ></script>
   </body>
 </html>

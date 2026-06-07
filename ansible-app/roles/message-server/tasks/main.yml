@@ -1,0 +1,68 @@
+---
+# 1. /opt/message-server を作成
+- name: Ensure /opt/message-server exists
+  become: true
+  file:
+    path: /opt/message-server
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+# 2. プロジェクトをコピー
+- name: Copy message-server project to /opt/message-server
+  become: true
+  copy:
+    src: "/home/{{ ansible_user }}/projects/message-server/"
+    dest: "/opt/message-server/"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+
+- name: Deploy .env
+  template:
+    src: .env.j2
+    dest: /opt/message-server/.env
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: Restart message-server
+
+# 3. npm install を /opt/message-server で実行
+- name: Run npm install in /opt/message-server
+  become: true
+  become_user: "{{ ansible_user }}"
+  shell: |
+    export HOME=/home/{{ ansible_user }}
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    nvm use --lts >/dev/null 2>&1 || nvm use 18
+
+    cd /opt/message-server
+    npm install --production
+  args:
+    executable: /bin/bash
+  notify: Restart message-server
+
+# 4. systemd service
+- name: Deploy systemd service
+  become: true
+  template:
+    src: message-server.service.j2
+    dest: /etc/systemd/system/message-server.service
+  notify: Restart message-server
+
+# 5. nginx reverse proxy
+- name: Deploy nginx reverse proxy
+  become: true
+  template:
+    src: message-server.nginx.j2
+    dest: /etc/nginx/sites-available/message-server.conf
+
+- name: Enable nginx site
+  become: true
+  file:
+    src: /etc/nginx/sites-available/message-server.conf
+    dest: /etc/nginx/sites-enabled/message-server.conf
+    state: link
+  notify: Reload nginx

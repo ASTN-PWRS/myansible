@@ -1,0 +1,4 @@
+paddleocr-vl==1.6.0
+paddlenlp
+pillow
+pyyaml

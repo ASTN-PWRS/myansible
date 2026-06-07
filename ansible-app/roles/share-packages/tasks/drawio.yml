@@ -1,0 +1,17 @@
+- name: Ensure drawio directory exists
+  become: true
+  ansible.builtin.file:
+    path: /var/www/share/drawio
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Copy drawio directory to /var/www/share
+  become: true
+  ansible.builtin.copy:
+    src: drawio/
+    dest: /var/www/share/drawio/
+    owner: www-data
+    group: www-data
+    mode: "0755"

@@ -1,0 +1,7 @@
+# =========================
+# task 1: build cli
+# =========================
+---
+- name: build cli
+  ansible.builtin.import_tasks: cli.yml
+  tags: [paddleocr_vl, install]

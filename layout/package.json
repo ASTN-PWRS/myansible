@@ -12,6 +12,7 @@
     "vite": "^8.0.12"
   },
   "dependencies": {
-    "@panzoom/panzoom": "^4.6.2"
+    "@panzoom/panzoom": "^4.6.2",
+    "@pgrabovets/json-view": "^2.8.1"
   }
 }

@@ -1,0 +1,90 @@
+#subprocess.run(
+#    ["/opt/sql-tools/.venv/bin/python", "/opt/sql-tools/validate_sql.py", "--db", "postgres"],
+#    input=sql,
+#    text=True,
+#    stdout=subprocess.PIPE,
+#    stderr=subprocess.PIPE
+#)
+
+
+#!/usr/bin/env python3
+import argparse
+import json
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+try:
+    import sqlparse
+except ImportError:
+    sqlparse = None
+
+
+def run_psql(sql: str, db: str):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".sql") as tmp:
+        tmp.write(sql.encode("utf-8"))
+        tmp.flush()
+
+        cmd = [
+            "psql",
+            "-d", db,
+            "-f", tmp.name,
+            "--echo-errors",
+            "--single-transaction",
+            "--set", "ON_ERROR_STOP=1"
+        ]
+
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        return {
+            "returncode": proc.returncode,
+            "stdout": proc.stdout,
+            "stderr": proc.stderr
+        }
+
+
+def format_sql(sql: str) -> str:
+    if sqlparse is None:
+        return sql  # fallback
+    return sqlparse.format(sql, reindent=True, keyword_case="upper")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Validate SQL using PostgreSQL dry-run")
+    parser.add_argument("--db", default="postgres", help="Database name")
+    parser.add_argument("--file", help="SQL file to validate")
+    args = parser.parse_args()
+
+    if args.file:
+        sql = Path(args.file).read_text()
+    else:
+        sql = sys.stdin.read()
+
+    result = run_psql(sql, args.db)
+
+    # Validation failed → エラーを返す
+    if result["returncode"] != 0:
+        print(json.dumps({
+            "ok": False,
+            "error": result["stderr"],
+            "stdout": result["stdout"]
+        }, ensure_ascii=False))
+        return
+
+    # Validation success → 整形した SQL を返す
+    formatted = format_sql(sql)
+
+    print(json.dumps({
+        "ok": True,
+        "formatted_sql": formatted
+    }, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

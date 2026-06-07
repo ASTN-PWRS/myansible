@@ -1,0 +1,37 @@
+---
+- name: Ensure sql-tools directory exists
+  file:
+    path: /opt/sql-tools
+    state: directory
+    mode: "0755"
+
+- name: Deploy validate_sql.py template
+  template:
+    src: validate_sql.py.j2
+    dest: /opt/sql-tools/validate_sql.py
+    mode: "0755"
+
+- name: Create uv venv for sql validator
+  command: uv venv /opt/sql-tools/.venv
+  args:
+    creates: /opt/sql-tools/.venv
+
+- name: Install sqlparse into venv
+  command: /opt/sql-tools/.venv/bin/pip install sqlparse
+  args:
+    creates: /opt/sql-tools/.venv/lib
+
+- name: Symlink CLI into venv/bin
+  file:
+    src: /opt/sql-tools/validate_sql.py
+    dest: /opt/sql-tools/.venv/bin/validate_sql
+    state: link
+
+- name: Test validate_sql CLI
+  command: /opt/sql-tools/.venv/bin/python /opt/sql-tools/validate_sql.py --db postgres
+  register: validate_test
+  changed_when: false
+
+- name: Debug test output
+  debug:
+    var: validate_test.stdout

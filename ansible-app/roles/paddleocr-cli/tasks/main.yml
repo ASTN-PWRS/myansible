@@ -1,0 +1,114 @@
+---
+# ============================================
+# 0. Ensure model directory
+# ============================================
+- name: Ensure PaddleOCR-VL model directory exists
+  file:
+    path: "{{ paddle_vl_model_path }}"
+    state: directory
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+    mode: "0755"
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 1. Create temporary venv
+# ============================================
+- name: Create temporary venv for PaddleOCR-VL build
+  command: >
+    /root/.local/bin/uv venv /tmp/paddle-vl-venv --python 3.13
+  args:
+    creates: "/tmp/paddle-vl-venv/bin/python"
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 2. Install requirements.txt
+# ============================================
+- name: Install PaddleOCR-VL dependencies
+  command: >
+    /root/.local/bin/uv pip install
+    --python /tmp/paddle-vl-venv/bin/python
+    -r {{ role_path }}/files/requirements.txt
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 3. Copy CLI script into venv site-packages
+# ============================================
+- name: Copy paddleocr_vl_cli.py into venv
+  copy:
+    src: paddleocr_vl_cli.py
+    dest: /tmp/paddle-vl-venv/lib/python3.13/site-packages/paddleocr_vl_cli.py
+    mode: "0755"
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 4. Warmup model (download into model_path)
+# ============================================
+- name: Warmup PaddleOCR-VL model
+  shell: |
+    export PADDLEOCR_VL_CACHE_HOME="{{ paddle_vl_model_path }}"
+
+    /tmp/paddle-vl-venv/bin/python - << 'EOF'
+    from paddleocr_vl import VLModel
+    model = VLModel.from_pretrained("PaddleOCR-VL-1.6-base")
+    model.predict("dummy.jpg")
+    EOF
+  environment:
+    PADDLEOCR_VL_CACHE_HOME: "{{ paddle_vl_model_path }}"
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 5. Install pex into venv
+# ============================================
+- name: Install pex into venv
+  command: >
+    /root/.local/bin/uv pip install
+    --python /tmp/paddle-vl-venv/bin/python
+    pex
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 6. Build pex CLI
+# ============================================
+- name: Build PaddleOCR-VL CLI via pex
+  shell: |
+    /tmp/paddle-vl-venv/bin/pex \
+      paddleocr-vl \
+      -c paddleocr_vl_cli \
+      -o /usr/local/bin/paddleocr-vl.pex \
+      --python /tmp/paddle-vl-venv/bin/python \
+      --include-file /tmp/paddle-vl-venv/lib/python3.13/site-packages/paddleocr_vl_cli.py
+  args:
+    creates: "/usr/local/bin/paddleocr-vl.pex"
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 7. Symlink
+# ============================================
+- name: Create symlink paddleocr-vl
+  file:
+    src: /usr/local/bin/paddleocr-vl.pex
+    dest: /usr/local/bin/paddleocr-vl
+    state: link
+    mode: "0755"
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 8. Fix permissions
+# ============================================
+- name: Fix permissions for model directory
+  file:
+    path: "{{ paddle_vl_model_path }}"
+    recurse: yes
+    owner: "{{ model_owner }}"
+    group: "{{ model_group }}"
+  tags: [install, paddleocr_vl]
+
+# ============================================
+# 9. Remove temporary venv
+# ============================================
+- name: Remove temporary venv
+  file:
+    path: /tmp/paddle-vl-venv
+    state: absent
+  tags: [install, paddleocr_vl]

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{ title }}</title>
+</head>
+<body>
+  <h2>{{ title }}</h2>
+
+  <input id="msg" placeholder="message">
+  <button onclick="send()">Send</button>
+
+  <ul id="logs"></ul>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io("/socketio");
+
+    socket.on("message", (msg) => {
+      const li = document.createElement("li");
+      li.textContent = msg;
+      document.getElementById("logs").appendChild(li);
+    });
+
+    function send() {
+      const msg = document.getElementById("msg").value;
+      socket.emit("message", msg);
+    }
+  </script>
+</body>
+</html>
