@@ -2,6 +2,6 @@
   become: yes
   roles:
     - share-packages
-    - emb
+    - message-server
     - ocr
     - ocr-worker

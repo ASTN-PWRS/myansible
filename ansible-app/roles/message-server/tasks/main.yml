@@ -8,6 +8,7 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: "0755"
+  tags: [install, message-server]
 
 # 2. プロジェクトをコピー
 - name: Copy message-server project to /opt/message-server
@@ -18,6 +19,7 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: "0644"
+  tags: [install, message-server]
 
 - name: Deploy .env
   template:
@@ -27,6 +29,7 @@
     group: "{{ ansible_user }}"
     mode: "0644"
   notify: Restart message-server
+  tags: [install, message-server]
 
 # 3. npm install を /opt/message-server で実行
 - name: Run npm install in /opt/message-server
@@ -43,6 +46,7 @@
   args:
     executable: /bin/bash
   notify: Restart message-server
+  tags: [install, message-server]
 
 # 4. systemd service
 - name: Deploy systemd service
@@ -51,6 +55,7 @@
     src: message-server.service.j2
     dest: /etc/systemd/system/message-server.service
   notify: Restart message-server
+  tags: [install, message-server]
 
 # 5. nginx reverse proxy
 - name: Deploy nginx reverse proxy
@@ -58,6 +63,7 @@
   template:
     src: message-server.nginx.j2
     dest: /etc/nginx/sites-available/message-server.conf
+  tags: [install, message-server]
 
 - name: Enable nginx site
   become: true
@@ -66,3 +72,4 @@
     dest: /etc/nginx/sites-enabled/message-server.conf
     state: link
   notify: Reload nginx
+  tags: [install, message-server]

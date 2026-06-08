@@ -1,92 +1,18 @@
 # ===========================
-# 1. build_env ディレクトリ作成
+# 1. Install webawesome
 # ===========================
-- name: Ensure build_env directory exists
-  become: true
-  file:
-    path: "/home/{{ ansible_user }}/build_env"
-    state: directory
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0755"
-  tags: [install, build_env]
-
+- name: Install tasks
+  ansible.builtin.import_tasks: webawesome.yml
+  tags: [install, webawesome]
 # ===========================
-# 2. files/build_env をコピー
-# ===========================
-- name: Copy build_env source
-  become: true
-  copy:
-    src: build_env/
-    dest: "/home/{{ ansible_user }}/build_env/"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0755"
-  tags: [install, build_env]
-
-# ===========================
-# 3. npm install（複数パッケージ）
-# ===========================
-- name: Install dependencies
-  become: true
-  become_user: "{{ ansible_user }}"
-  shell: |
-    export HOME="/home/{{ ansible_user }}"
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-    nvm use --lts
-
-    cd "$HOME/build_env"
-
-    npm install vite -D
-    npm install @awesome.me/webawesome
-
-  args:
-    executable: /bin/bash
-  tags: [install, build_env]
-
-# ===========================
-# 4. npm run build
-# ===========================
-- name: Build package
-  become: true
-  become_user: "{{ ansible_user }}"
-  shell: |
-    export HOME="/home/{{ ansible_user }}"
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-    nvm use --lts
-
-    cd "$HOME/build_env"
-    npm run build
-  args:
-    executable: /bin/bash
-  tags: [install, build_env]
-
-# ===========================
-# 5. npm run deploy
-# ===========================
-- name: Deploy package
-  become: true
-  become_user: "{{ ansible_user }}"
-  shell: |
-    export HOME="/home/{{ ansible_user }}"
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-    nvm use --lts
-
-    cd "$HOME/build_env"
-    npm run deploy
-  args:
-    executable: /bin/bash
-  tags: [install, build_env]
-
-# ===========================
-# 4. Install drawio/viewer
+# 2. Install drawio/viewer
 # ===========================
 - name: Install tasks
   ansible.builtin.import_tasks: drawio.yml
-  tags: [install, build_env]
+  tags: [install, drawio]
+# ===========================
+# 3. Install htmx
+# ===========================
+- name: Install tasks
+  ansible.builtin.import_tasks: htmx.yml
+  tags: [install, htmx]

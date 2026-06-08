@@ -5,9 +5,11 @@
     name: message-server
     state: restarted
     enabled: yes
+  tags: [install, message-server]
 
 - name: Reload nginx
   become: true
   service:
     name: nginx
     state: reloaded
+  tags: [install, message-server]

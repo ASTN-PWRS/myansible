@@ -1,0 +1,76 @@
+# ===========================
+# 1. htmx ディレクトリ作成
+# ===========================
+- name: Ensure build directory exists
+  become: true
+  file:
+    path: "/home/{{ ansible_user }}/build"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  tags: [install, htmx]
+
+# ===========================
+# 2. files/htmx をコピー
+# ===========================
+- name: Copy htmx source
+  become: true
+  copy:
+    src: build/
+    dest: "/home/{{ ansible_user }}/build/"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  tags: [install, htmx]
+
+# ===========================
+# 3. npm install（複数パッケージ）
+# ===========================
+- name: Install dependencies
+  become: true
+  become_user: "{{ ansible_user }}"
+  shell: |
+    export HOME="/home/{{ ansible_user }}"
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+    nvm use --lts
+
+    cd "$HOME/build"
+
+    npm install htmx.org
+
+  args:
+    executable: /bin/bash
+  tags: [install, htmx]
+
+# 4. /var/www/share/htmx を作成
+- name: Ensure /var/www/share/htmx exists
+  become: true
+  file:
+    path: /var/www/share/htmx
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0755"
+  tags: [install, share]
+
+# 5. client-dist を /var/www/share/socket.io にコピー
+- name: Copy built client-dist to /var/www/share/htmx
+  become: true
+  copy:
+    src: "/home/{{ ansible_user }}/build/node_modules/htmx.org/dist/"
+    dest: "/var/www/share/htmx/"
+    owner: "{{ ansible_user }}"
+    group: www-data
+    mode: "0644"
+  tags: [install, share]
+
+# 6. /srv/share-packages を削除
+- name: Remove /home/{{ ansible_user }}/build directory
+  become: true
+  file:
+    path: /home/{{ ansible_user }}/build/
+    state: absent
+  tags: [install, share]
