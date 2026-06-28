@@ -1,0 +1,8 @@
+---
+- name: Install fastSAM model
+  ansible.builtin.import_tasks: model.yml
+  tags: [fastSAM, install]
+
+- name: Build fastSAM model
+  ansible.builtin.import_tasks: build.yml
+  tags: [fastSAM, install]

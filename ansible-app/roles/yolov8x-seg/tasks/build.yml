@@ -1,0 +1,84 @@
+---
+- name: Ensure pipx is installed
+  package:
+    name: pipx
+    state: present
+
+- name: Ensure zip is installed
+  apt:
+    name: zip
+    state: present
+    update_cache: yes
+
+# YOLOv8-seg CLI プロジェクトディレクトリ
+- name: Create yolov8-seg-cli project directory
+  file:
+    path: /opt/yolov8-seg-cli
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+# yolov8_seg_cli/ ディレクトリ
+- name: Create yolov8_seg_cli package directory
+  file:
+    path: /opt/yolov8-seg-cli/yolov8_seg_cli
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+# PEX キャッシュ削除（重要）
+- name: Clear PEX cache
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/opt/yolov8-seg-cli/.cache/pex"
+    - "/home/{{ ansible_user }}/.cache/pex"
+
+# プロジェクトファイル配置
+- name: Copy yolov8-seg-cli project files
+  copy:
+    src: "{{ item.src }}"
+    dest: "/opt/yolov8-seg-cli/{{ item.dest }}"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  loop:
+    - { src: "pyproject.toml", dest: "pyproject.toml" }
+    - { src: "yolov8_seg_cli/", dest: "yolov8_seg_cli/" }
+    - { src: "requirements.txt", dest: "requirements.txt" }
+
+# PEX ビルド（安定版：--scie lazy を削除）
+- name: Build yolov8-seg binary using PEX
+  become: yes
+  become_user: "{{ ansible_user }}"
+  shell: |
+    set -euo pipefail
+
+    cd /opt/yolov8-seg-cli
+
+    export HOME="/home/{{ ansible_user }}"
+    export PIP_CACHE_DIR="/opt/yolov8-seg-cli/.cache/pip"
+    export PEX_ROOT="/opt/yolov8-seg-cli/.cache/pex"
+
+    pipx run pex \
+      --python python3 \
+      -r requirements.txt \
+      --sources-directory yolov8_seg_cli \
+      -e yolov8_seg_cli.cli:main \
+      -o yolov8-seg-binary
+  args:
+    executable: /bin/bash
+
+# インストール
+- name: Install yolov8-seg-binary
+  become: yes
+  copy:
+    src: /opt/yolov8-seg-cli/yolov8-seg-binary
+    dest: /usr/local/bin/yolov8_seg
+    remote_src: yes
+    owner: root
+    group: root
+    mode: "0755"

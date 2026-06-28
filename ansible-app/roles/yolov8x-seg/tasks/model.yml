@@ -1,0 +1,61 @@
+---
+- name: Create YOLOv8 model directory
+  file:
+    path: /opt/models/YOLOv8
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Create build directory
+  file:
+    path: /home/{{ ansible_user }}/yolov8-build
+    state: directory
+    mode: "0755"
+
+- name: Create Python venv
+  command: python3 -m venv /home/{{ ansible_user }}/yolov8-build/venv
+  args:
+    creates: /home/{{ ansible_user }}/yolov8-build/venv
+
+- name: Install PyTorch CPU version
+  command: >
+    /home/{{ ansible_user }}/yolov8-build/venv/bin/pip install
+    torch torchvision torchaudio
+    --index-url https://download.pytorch.org/whl/cpu
+
+- name: Install ultralytics (YOLOv8)
+  command: >
+    /home/{{ ansible_user }}/yolov8-build/venv/bin/pip install
+    ultralytics onnx onnxruntime
+
+- name: Download YOLOv8-seg model (yolov8x-seg)
+  get_url:
+    url: "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8x-seg.pt"
+    dest: /home/{{ ansible_user }}/yolov8-build/yolov8x-seg.pt
+    mode: "0644"
+
+- name: Copy ONNX conversion script
+  copy:
+    src: convert_yolov8_seg_to_onnx.py
+    dest: /home/{{ ansible_user }}/yolov8-build/convert_yolov8_seg_to_onnx.py
+    mode: "0755"
+
+- name: Run ONNX conversion
+  command: >
+    /home/{{ ansible_user }}/yolov8-build/venv/bin/python
+    convert_yolov8_seg_to_onnx.py
+  args:
+    chdir: /home/{{ ansible_user }}/yolov8-build
+
+- name: Move ONNX model to /opt/models/YOLOv8
+  copy:
+    src: "/home/{{ ansible_user }}/yolov8-build/yolov8x-seg.onnx"
+    dest: "/opt/models/YOLOv8/yolov8x-seg.onnx"
+    remote_src: yes
+    mode: "0644"
+
+- name: Cleanup build directory
+  file:
+    path: /home/{{ ansible_user }}/yolov8-build
+    state: absent

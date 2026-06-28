@@ -17,7 +17,7 @@ os.environ["PADDLE_PDX_CACHE_HOME"] = "/opt/models/ocr"
 # ============================================
 def run_ocr(ocr, img):
     np_img = np.array(img)
-    result = ocr.ocr(np_img, cls=True)
+    result = ocr.ocr(np_img)
 
     lines = []
     if result:

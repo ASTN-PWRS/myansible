@@ -3,5 +3,8 @@
   roles:
     - share-packages
     - message-server
-    - ocr
-    - ocr-worker
+    - siglip2
+    - yolov8x-seg
+    # - paddleocr-cli
+    # - ocr
+    # - ocr-worker

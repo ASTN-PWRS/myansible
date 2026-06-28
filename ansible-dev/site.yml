@@ -14,7 +14,6 @@
     - garnet # Garnet
     - supervisor
     - paddleocr-build
-    - paddleocr-cli
     - embedding-build
     - emb # build embed-binary cli
-    - table-transformer-build
+    - paddleocr-cli
