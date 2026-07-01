@@ -1,0 +1,18 @@
+[Unit]
+Description=Message Server (Express + Socket.IO)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /opt/message-server/server.js
+WorkingDirectory=/opt/message-server
+Restart=always
+User={{ ansible_user }}
+Environment=NODE_ENV=production
+
+# ---- ここが重要 ----
+StandardOutput=journal
+StandardError=journal
+# ---------------------
+
+[Install]
+WantedBy=multi-user.target

@@ -127,6 +127,11 @@ def run_train(model_path, data_yaml, epochs, imgsz, batch, project, name):
 
 
 def main():
+
+    DEFAULT_YOLO_CONFIG_DIR = "/opt/apps/ultralytics-config"
+    config_dir = os.environ.get("YOLO_CONFIG_DIR", DEFAULT_YOLO_CONFIG_DIR)
+    os.environ["YOLO_CONFIG_DIR"] = config_dir
+        
     parser = argparse.ArgumentParser(
         description="YOLOv8-seg CLI — segment image OR train custom model"
     )
