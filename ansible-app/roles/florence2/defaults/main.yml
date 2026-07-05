@@ -1,0 +1,19 @@
+---
+florence2_user: "{{ ansible_user }}"
+florence2_group: "{{ ansible_user }}"
+
+florence2_root: /opt/florence2
+
+florence2_model_name: microsoft/Florence-2-base
+
+florence2_pex: "{{ florence2_root }}/florence2.pex"
+
+florence2_requirements:
+  - torch
+  - torchvision
+  - transformers
+  - accelerate
+  - pillow
+  - timm
+  - sentencepiece
+  - pex

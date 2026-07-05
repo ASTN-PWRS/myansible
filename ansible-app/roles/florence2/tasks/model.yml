@@ -1,0 +1,109 @@
+---
+- name: Install system packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - python3
+      - pipx
+    state: present
+    update_cache: true
+
+- name: Ensure pipx path
+  become: true
+  ansible.builtin.command:
+    cmd: pipx ensurepath
+  changed_when: false
+
+- name: Install pex via pipx
+  become: true
+  ansible.builtin.command:
+    cmd: pipx install --force pex
+  changed_when: true
+
+- name: Create Florence2 directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /opt/florence2
+    - /opt/models
+    - /opt/florence2/hf_cache
+
+- name: Download Florence2 model
+  become: true
+  ansible.builtin.shell: |
+    pipx run \
+      --spec huggingface_hub \
+      python3 - <<'PY'
+    from huggingface_hub import snapshot_download
+
+    snapshot_download(
+        repo_id="microsoft/Florence-2-base",
+        revision="main",
+        local_dir="/opt/models/florence2-base",
+        local_dir_use_symlinks=False
+    )
+    PY
+  args:
+    executable: /bin/bash
+    creates: /opt/models/florence2-base/config.json
+
+- name: Deploy CLI script
+  become: true
+  ansible.builtin.template:
+    src: florence2_cli.py.j2
+    dest: /opt/florence2/florence2_cli.py
+    mode: "0755"
+
+- name: Remove old Florence2 pex
+  become: true
+  ansible.builtin.file:
+    path: /opt/florence2/florence2.pex
+    state: absent
+
+- name: Remove pex cache
+  become: true
+  ansible.builtin.file:
+    path: /root/.cache/pex
+    state: absent
+
+- name: Build Florence2 runtime pex
+  become: true
+  ansible.builtin.shell: |
+    /root/.local/bin/pex \
+      "torch>=2.3" \
+      "torchvision>=0.18" \
+      "transformers>=4.46,<4.48" \
+      "accelerate>=0.34" \
+      pillow \
+      timm \
+      sentencepiece \
+      safetensors \
+      einops \
+      --sources-directory /opt/florence2 \
+      -m florence2_cli \
+      -o /opt/florence2/florence2.pex
+  args:
+    executable: /bin/bash
+
+- name: Ensure Florence2 pex is executable
+  become: true
+  ansible.builtin.file:
+    path: /opt/florence2/florence2.pex
+    mode: "0755"
+    state: file
+
+- name: Create wrapper command
+  become: true
+  ansible.builtin.copy:
+    dest: /usr/local/bin/florence2
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      set -e
+
+      export HF_HOME=/opt/florence2/hf_cache
+
+      exec /opt/florence2/florence2.pex "$@"

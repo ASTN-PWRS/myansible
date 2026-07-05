@@ -1,0 +1,8 @@
+---
+- name: Install florence2 model
+  ansible.builtin.import_tasks: model.yml
+  tags: [florence2, install]
+
+- name: Install florence2 cli
+  ansible.builtin.import_tasks: build.yml
+  tags: [florence2, install]

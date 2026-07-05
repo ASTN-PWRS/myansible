@@ -1,0 +1,70 @@
+import argparse
+import os
+
+from PIL import Image
+
+import torch
+from transformers import AutoProcessor, AutoModelForCausalLM
+
+MODEL_NAME = "/opt/models/florence2-base"
+
+torch.set_num_threads(os.cpu_count())
+
+device = "cpu"
+
+processor = AutoProcessor.from_pretrained(
+    MODEL_NAME,
+    trust_remote_code=True,
+    local_files_only=True
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    trust_remote_code=True,
+    local_files_only=True
+).to(device)
+
+
+def run_task(image_path, prompt):
+    image = Image.open(image_path).convert("RGB")
+
+    inputs = processor(
+        text=prompt,
+        images=image,
+        return_tensors="pt"
+    ).to(device)
+
+    with torch.inference_mode():
+        generated_ids = model.generate(
+            input_ids=inputs["input_ids"],
+            pixel_values=inputs["pixel_values"],
+            max_new_tokens=128,
+        )
+
+    generated_text = processor.batch_decode(
+        generated_ids,
+        skip_special_tokens=False
+    )[0]
+
+    result = processor.post_process_generation(
+        generated_text,
+        task=prompt,
+        image_size=(image.width, image.height)
+    )
+
+    print(result)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--image", required=True)
+    parser.add_argument("--prompt", default="<CAPTION>")
+
+    args = parser.parse_args()
+
+    run_task(args.image, args.prompt)
+
+
+if __name__ == "__main__":
+    main()

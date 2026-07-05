@@ -1,11 +1,10 @@
 [project]
-name = "yolov8-seg-cli"
+name = "sigclip2-cli"
 version = "0.1.0"
-description = "YOLOv8-seg ONNX CLI wrapper"
-requires-python = ">=3.8"
+description = "SigCLIP2 CLI wrapper"
+requires-python = ">=3.12"
 
 dependencies = []
 
 [project.scripts]
-yolov8_seg = "yolov8_seg_cli.cli:main"
-
+sigclip2-cli = "sigclip2-cli.cli:main"
