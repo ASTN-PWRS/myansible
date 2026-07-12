@@ -1,0 +1,23 @@
+- name: Create model directory
+  file:
+    path: /opt/models/qwen2.5
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Qwen2.5 GGUF model
+  get_url:
+    url: "{{ dl_url }}"
+    dest: /opt/models/qwen2.5/Qwen2.5-7B-Instruct-Q4_K_M.gguf
+    mode: "0644"
+
+- name: Copy Modelfile (detect changes)
+  copy:
+    src: Modelfile
+    dest: /opt/models/qwen2.5/Modelfile
+    owner: root
+    group: root
+    mode: "0644"
+  notify: build qwen model
+# ハンドラで ollama build を実行

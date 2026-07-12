@@ -16,7 +16,19 @@ os.environ["PADDLE_PDX_CACHE_HOME"] = "/opt/models/ocr"
 # OCR 実行
 # ============================================
 def run_ocr(ocr, img):
+    # Pillow Image → RGB 強制
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
     np_img = np.array(img)
+
+    # numpy array が 3ch であることを保証
+    if len(np_img.shape) == 2:  # H, W
+        # Pillow convert で通常は起きないが念のため
+        np_img = np.stack([np_img]*3, axis=-1)
+    elif np_img.shape[2] == 1:  # H, W, 1
+        np_img = np.repeat(np_img, 3, axis=2)
+
     result = ocr.ocr(np_img)
 
     lines = []

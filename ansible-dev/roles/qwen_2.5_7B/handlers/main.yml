@@ -1,0 +1,4 @@
+- name: build qwen model
+  command: ollama build -f /opt/models/qwen2.5/Modelfile qwen2.5
+  args:
+    chdir: /opt/models/qwen2.5

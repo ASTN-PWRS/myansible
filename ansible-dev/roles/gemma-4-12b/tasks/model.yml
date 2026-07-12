@@ -1,0 +1,23 @@
+---
+- name: Deploy Modelfile for gemma4-12b-it-local
+  copy:
+    dest: /usr/share/ollama/models/Modelfile.gemma4-12b-it-local
+    mode: "0644"
+    content: |
+      FROM /usr/share/ollama/models/gemma-4-12b-it-Q4_K_M.gguf
+      TEMPLATE "chat"
+      PARAMETER temperature 0.7
+
+- name: Create local Gemma 4 12B-it model
+  command: >
+    ollama create gemma4-12b-it-local
+    -f /usr/share/ollama/models/Modelfile.gemma4-12b-it-local
+  args:
+    creates: /usr/share/ollama/models/gemma4-12b-it-local
+
+- name: Warm up Gemma 4 12B-it local model
+  command: >
+    curl -s -X POST http://localhost:11434/api/generate
+    -d '{"model":"gemma4-12b-it-local","prompt":"warmup"}'
+  register: warmup_result
+  changed_when: false
