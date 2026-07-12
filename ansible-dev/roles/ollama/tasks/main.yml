@@ -26,3 +26,16 @@
     tar -xf "{{ ollama_dir }}/ollama-linux-amd64.tar" -C "{{ ollama_dir }}"
   args:
     creates: "{{ ollama_dir }}/bin/ollama"
+
+- name: Ensure ollama binary is executable by all users
+  become: yes
+  file:
+    path: "{{ ollama_dir }}/bin/ollama"
+    mode: "0755"
+
+- name: Link ollama binary to /usr/local/bin
+  become: yes
+  file:
+    src: "{{ ollama_dir }}/bin/ollama"
+    dest: "/usr/local/bin/ollama"
+    state: link
