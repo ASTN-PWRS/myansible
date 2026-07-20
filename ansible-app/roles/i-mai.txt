@@ -1,0 +1,1019 @@
+
+
+1. pdf_documents（PDFメタ情報＋原本URL）
+CREATE TABLE pdf_documents (
+  doc_id      uuid PRIMARY KEY
+  file_name   text,
+  file_url    text,
+  file_hash   text UNIQUE,       -- ★ 追加：PDFのSHA256など
+  title       text,
+  page_count  int,
+  category    text,
+  created_at  timestamptz DEFAULT now()
+);
+
+
+2. pdf_pages（ページ単位の情報＋サムネイルURL）
+Gemini Vision はページ画像を返せるので、
+pdf2image で生成したページ画像をストレージに保存し、URL を持たせる。
+
+CREATE TABLE pdf_pages (
+  doc_id      uuid PRIMARY KEY
+  page_number     int,
+  page_image_url  text,          -- ページ全体のサムネイルURL
+  summary         text,
+  has_figure      boolean,
+  has_table       boolean,
+  has_photo       boolean,
+  sections        jsonb,
+  created_at      timestamptz DEFAULT now(),
+  PRIMARY KEY (doc_id, page_number)
+);
+
+3. pdf_chunks（意味チャンク＋bbox画像URL）
+Gemini Thinking が返す意味チャンクを保存し、
+bbox から切り出した画像をストレージに保存して URL を持たせる。
+
+CREATE TABLE pdf_chunks (
+  id              bigserial PRIMARY KEY,
+  doc_id          uuid NOT NULL,
+  page_number     int NOT NULL,
+  chunk_index     int NOT NULL,
+  text            text,
+  text_tsv        tsvector,
+  chunk_type      text,
+  bbox            jsonb,
+  bbox_image_url  text,
+  embedding       vector(768),
+  meta            jsonb,
+  created_at      timestamptz DEFAULT now()
+);
+
+-- chunk の一意性保証
+CREATE UNIQUE INDEX idx_chunks_unique
+  ON pdf_chunks (doc_id, page_number, chunk_index);
+
+-- 検索用
+CREATE INDEX idx_chunks_tsv ON pdf_chunks USING GIN (text_tsv);
+CREATE INDEX idx_chunks_embedding_hnsw ON pdf_chunks USING hnsw (embedding);
+
+
+
+| 種類 | 内容 | どこから取るか |
+| --- | --- | --- |
+| 原本PDFリンク | ``file_url`` | pdf_documents |
+| ページサムネイル | ``page_image_url`` | pdf_pages |
+| 該当箇所の画像 | ``bbox_image_url`` | pdf_chunks |
+| テキスト | ``text`` | pdf_chunks |
+| 図/表/写真の種類 | ``chunk_type`` | pdf_chunks |
+| bbox座標 | ``bbox`` | pdf_chunks |
+
+/data/documents/{doc_id}/
+    original.pdf
+    pages/
+        page_1.png
+        page_2.png
+        ...
+    chunks/
+        page_1_chunk_1.png
+        page_1_chunk_2.png
+        ...
+    meta/
+        vision_page_1.json
+        thinking_page_1.json
+
+
+
+PDF
+ ↓ pdf2image（MIT）
+Gemini Vision（OCR＋bbox＋図表抽出）
+ ↓
+ローカルでページ画像保存（/data/pdf-pages/...）
+ ↓
+ローカルで bbox 切り出し画像保存（/data/pdf-bbox/...）
+ ↓
+Gemini Thinking（意味チャンク化）
+ ↓
+bge-m3（embedding）
+ ↓
+PostgreSQL（URLはローカル静的サーバのパス）
+ ↓
+Gemma 4（検索条件生成）
+Gemini Thinking（検索計画最適化）
+
+
+Gemini Vision メタプロンプト（完全版）
+
+あなたは高精度なドキュメント解析エンジンです。
+入力される画像は PDF のページ画像です。
+
+必ず以下の処理を行い、指定の JSON 形式で返してください。
+
+【必須タスク】
+1. OCR（日本語＋英語）
+   - テキストを正確に抽出する
+   - 誤字補正は行わない（原文忠実）
+
+2. bbox 抽出
+   - テキストブロックごとに bbox を返す
+   - 図・表・写真などの非テキスト領域も bbox を返す
+   - 座標は画像のピクセル基準で {x, y, w, h}
+
+3. 図表分類
+   - 各領域を以下のいずれかに分類する
+     "text", "figure", "table", "photo", "caption", "other"
+
+4. キャプション抽出
+   - 図や表に付随するキャプションを抽出し、対応する領域と紐付ける
+
+5. ページ構造化
+   - ページ内の領域を上から下へ並べる
+   - セクションタイトルがあれば抽出する
+
+【出力形式（厳密）】
+{
+  "page_number": <int>,
+  "width": <int>,
+  "height": <int>,
+  "blocks": [
+    {
+      "block_index": <int>,
+      "type": "text" | "figure" | "table" | "photo" | "caption" | "other",
+      "bbox": { "x": <int>, "y": <int>, "w": <int>, "h": <int> },
+      "text": "<string or empty>",
+      "caption_for": <block_index or null>
+    }
+  ]
+}
+
+注意：
+
+必ず JSON のみを返す
+
+余計な説明文は返さない
+
+bbox は整数
+
+テキストは改行を保持
+
+
+---
+
+# 🟦 **Gemini Thinking 用メタプロンプト（意味チャンク化＋構造化）**
+
+### 🎯 目的  
+Vision が返した構造化データをもとに：
+
+- 意味チャンク化（semantic chunking）  
+- 図・表・キャプションの関連付け  
+- セクション構造抽出  
+- チャンクごとのメタデータ生成  
+- DB登録用の最終 JSON を生成  
+
+を行う。
+
+---
+
+## 🧩 **Gemini Thinking メタプロンプト（完全版）**
+
+あなたは高精度なドキュメント構造化エンジンです。
+入力は Gemini Vision が返した JSON です。
+
+以下の処理を行い、指定の JSON 形式で返してください。
+
+【必須タスク】
+
+意味チャンク化（Semantic Chunking）
+
+テキストブロックを意味単位で分割する
+
+図・表・写真は単独チャンクとして扱う
+
+キャプションは対応する図表チャンクに紐付ける
+
+チャンク分類
+
+各チャンクを以下に分類する
+"text", "figure", "table", "photo", "caption"
+
+チャンクメタデータ生成
+
+セクションタイトル
+
+図表番号（推定）
+
+キャプションの関連付け
+
+ページ内の順序
+
+DB登録用データ生成
+
+チャンクごとに以下の情報を返す
+
+doc_id（入力で指定）
+
+page_number
+
+chunk_index
+
+chunk_type
+
+text（チャンクの内容）
+
+bbox
+
+meta（任意の追加情報）
+
+【出力形式（厳密）】
+{
+"doc_id": "<string>",
+"page_number": <int>,
+"chunks": [
+{
+"chunk_index": <int>,
+"chunk_type": "text" | "figure" | "table" | "photo" | "caption",
+"text": "<string or empty>",
+"bbox": { "x": <int>, "y": <int>, "w": <int>, "h": <int> },
+"meta": {
+"section": "<string or null>",
+"caption_for": <chunk_index or null>,
+"order": <int>
+}
+}
+]
+}
+
+**注意：**
+- 必ず JSON のみを返す  
+- Vision の block_index を chunk_index に変換  
+- 意味チャンク化は「意味単位」で行う  
+
+
+
+import os
+import json
+import base64
+from pathlib import Path
+
+import psycopg2
+from psycopg2.extras import execute_values
+
+from pdf2image import convert_from_path
+from PIL import Image
+import requests
+
+# =========================
+# 設定
+# =========================
+
+VISION_API_URL = "https://internal.api.local/vision/analyze"
+THINKING_API_URL = "https://internal.api.local/thinking/chunk"
+TOKEN_URL = "https://internal.api.local/auth/token"
+
+PDF_DIR = Path("./pdf-originals")
+PAGE_IMG_DIR = Path("./data/pdf-pages")
+BBOX_IMG_DIR = Path("./data/pdf-bbox")
+
+PAGE_IMG_DIR.mkdir(parents=True, exist_ok=True)
+BBOX_IMG_DIR.mkdir(parents=True, exist_ok=True)
+
+PG_CONN_INFO = "dbname=yourdb user=youruser password=yourpass host=localhost port=5432"
+
+
+# =========================
+# Token取得（ダミー）
+# =========================
+
+def get_token():
+    """
+    社内APIのtokenを取得するダミー実装
+    """
+    resp = requests.post(TOKEN_URL, json={"client_id": "xxx", "client_secret": "yyy"})
+    return resp.json()["access_token"]
+
+
+# =========================
+# DB ヘルパ
+# =========================
+
+def get_pg_conn():
+    return psycopg2.connect(PG_CONN_INFO)
+
+
+def init_tables():
+    sqls = [
+        """
+        CREATE TABLE IF NOT EXISTS pdf_documents (
+          doc_id      text PRIMARY KEY,
+          file_name   text,
+          file_url    text,
+          title       text,
+          page_count  int,
+          created_at  timestamptz DEFAULT now()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS pdf_pages (
+          doc_id          text,
+          page_number     int,
+          page_image_url  text,
+          summary         text,
+          has_figure      boolean,
+          has_table       boolean,
+          has_photo       boolean,
+          sections        jsonb,
+          created_at      timestamptz DEFAULT now(),
+          PRIMARY KEY (doc_id, page_number)
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS pdf_chunks (
+          id              bigserial PRIMARY KEY,
+          doc_id          text,
+          page_number     int,
+          chunk_index     int,
+          text            text,
+          text_tsv        tsvector,
+          chunk_type      text,
+          bbox            jsonb,
+          bbox_image_url  text,
+          embedding       vector(768),
+          meta            jsonb,
+          created_at      timestamptz DEFAULT now()
+        );
+        """
+    ]
+    conn = get_pg_conn()
+    cur = conn.cursor()
+    for s in sqls:
+        cur.execute(s)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+# =========================
+# Vision API 呼び出し
+# =========================
+
+def call_vision_api(page_image_path: Path, page_number: int, token: str) -> dict:
+    with open(page_image_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode()
+
+    payload = {
+        "page_number": page_number,
+        "image": img_b64
+    }
+
+    resp = requests.post(
+        VISION_API_URL,
+        headers={"Authorization": f"Bearer {token}"},
+        json=payload
+    )
+    return resp.json()
+
+
+# =========================
+# Thinking API 呼び出し
+# =========================
+
+def call_thinking_api(doc_id: str, vision_json: dict, token: str) -> dict:
+    payload = {
+        "doc_id": doc_id,
+        "vision": vision_json
+    }
+
+    resp = requests.post(
+        THINKING_API_URL,
+        headers={"Authorization": f"Bearer {token}"},
+        json=payload
+    )
+    return resp.json()
+
+
+# =========================
+# 画像保存 & bbox切り出し
+# =========================
+
+def save_page_image(doc_id: str, page_number: int, pil_image: Image.Image) -> Path:
+    out_dir = PAGE_IMG_DIR / doc_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"page_{page_number}.png"
+    pil_image.save(out_path)
+    return out_path
+
+
+def crop_bbox_image(doc_id: str, page_number: int, chunk_index: int,
+                    page_image_path: Path, bbox: dict) -> Path:
+    img = Image.open(page_image_path)
+    x, y, w, h = bbox["x"], bbox["y"], bbox["w"], bbox["h"]
+    crop = img.crop((x, y, x + w, y + h))
+
+    out_dir = BBOX_IMG_DIR / doc_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"page_{page_number}_chunk_{chunk_index}.png"
+    crop.save(out_path)
+    return out_path
+
+
+def local_url_for(path: Path) -> str:
+    base = "http://localhost:8000"
+    rel = path.relative_to(Path("./data"))
+    return f"{base}/{rel.as_posix()}"
+
+
+# =========================
+# embedding（ダミー）
+# =========================
+
+def embed_text(text: str):
+    return [0.0] * 768
+
+
+# =========================
+# PDF → Vision → Thinking → PostgreSQL
+# =========================
+
+def process_pdf(pdf_path: Path):
+    token = get_token()
+
+    doc_id = pdf_path.stem
+    file_name = pdf_path.name
+    file_url = f"http://localhost:8000/pdf-originals/{file_name}"
+
+    pages = convert_from_path(str(pdf_path))
+    page_count = len(pages)
+
+    conn = get_pg_conn()
+    cur = conn.cursor()
+
+    # pdf_documents 登録
+    cur.execute(
+        """
+        INSERT INTO pdf_documents (doc_id, file_name, file_url, title, page_count)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (doc_id) DO UPDATE
+        SET file_name = EXCLUDED.file_name,
+            file_url  = EXCLUDED.file_url,
+            page_count = EXCLUDED.page_count;
+        """,
+        (doc_id, file_name, file_url, doc_id, page_count)
+    )
+
+    # 各ページ処理
+    for i, pil_page in enumerate(pages, start=1):
+        page_img_path = save_page_image(doc_id, i, pil_page)
+        page_image_url = local_url_for(page_img_path)
+
+        # Vision API
+        vision_json = call_vision_api(page_img_path, i, token)
+
+        # Thinking API
+        thinking_json = call_thinking_api(doc_id, vision_json, token)
+
+        # pdf_pages 登録
+        cur.execute(
+            """
+            INSERT INTO pdf_pages (doc_id, page_number, page_image_url,
+                                   summary, has_figure, has_table, has_photo, sections)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (doc_id, page_number) DO UPDATE
+            SET page_image_url = EXCLUDED.page_image_url;
+            """,
+            (
+                doc_id,
+                i,
+                page_image_url,
+                None,
+                None,
+                None,
+                None,
+                json.dumps({})
+            )
+        )
+
+        # pdf_chunks 登録
+        chunks = thinking_json["chunks"]
+        rows = []
+        for chunk in chunks:
+            chunk_index = chunk["chunk_index"]
+            chunk_type = chunk["chunk_type"]
+            text = chunk.get("text") or ""
+            bbox = chunk.get("bbox") or {"x": 0, "y": 0, "w": 0, "h": 0}
+            meta = chunk.get("meta") or {}
+
+            bbox_img_path = crop_bbox_image(
+                doc_id, i, chunk_index, page_img_path, bbox
+            )
+            bbox_image_url = local_url_for(bbox_img_path)
+
+            emb = embed_text(text)
+
+            rows.append((
+                doc_id,
+                i,
+                chunk_index,
+                text,
+                chunk_type,
+                json.dumps(bbox),
+                bbox_image_url,
+                emb,
+                json.dumps(meta),
+            ))
+
+        if rows:
+            execute_values(
+                cur,
+                """
+                INSERT INTO pdf_chunks
+                  (doc_id, page_number, chunk_index,
+                   text, chunk_type, bbox, bbox_image_url,
+                   embedding, meta)
+                VALUES %s
+                """,
+                rows
+            )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+# =========================
+# メイン
+# =========================
+
+if __name__ == "__main__":
+    init_tables()
+
+    for pdf_file in PDF_DIR.glob("*.pdf"):
+        print(f"Processing {pdf_file.name}...")
+        process_pdf(pdf_file)
+        print(f"Done: {pdf_file.name}")
+
+
+
+検索
+
+
+ユーザー
+   ↓
+Gemma 4（検索意図解析）
+   ↓ 生成
+検索条件JSON
+   ↓ POST
+検索API（FastAPI）
+   ↓
+bge-m3（embedding生成）
+   ↓
+PostgreSQL（全文＋ベクトル＋フィルタ）
+   ↓
+検索結果JSON
+   ↓
+Gemma 4（自然言語応答）
+   ↓
+ユーザーへ回答
+
+
+① ユーザーが検索クエリを入力する
+例：
+「温度センサーの校正方法を含む図を探したい」
+
+Gemma 4 はこの文章を受け取り、
+検索条件生成タスクとして処理を開始する。
+
+② Gemma 4 が検索意図を解析する（自然言語 → 検索条件）
+Gemma 4 は以下を抽出する：
+
+検索クエリ（全文検索用）  
+→ "温度 センサー 校正 方法"
+
+ベクトル検索クエリ  
+→ "温度センサー 校正"
+
+フィルタ条件
+
+chunk_type = ["figure"]（図だけ）
+
+bbox_area_min = 5000
+
+page_range = [1, 200]
+
+必要なら doc_id の絞り込み
+
+Gemma 4 が生成する検索条件（JSON）例：
+{
+  "query": "温度 センサー 校正 方法",
+  "vector_query": "温度センサー 校正",
+  "top_k": 10,
+  "filters": {
+    "chunk_type_in": ["figure"],
+    "bbox_area_min": 5000,
+    "bbox_area_max": 1000000,
+    "page_range": [1, 200]
+  }
+}
+
+④ 検索APIがベクトル生成（bge-m3）を行う
+
+q_emb = embed_query(req.vector_query)
+
+
+
+⑤ 検索APIが PostgreSQL に検索クエリを投げる
+全文検索（tsvector）＋ベクトル検索（pgvector）＋フィルタ条件を
+すべて組み合わせた SQL を実行する。
+
+SQL の要点：
+
+text_tsv @@ plainto_tsquery(query.q_text)
+
+embedding <-> q_emb
+
+chunk_type = ANY(...)
+
+bbox 面積フィルタ
+
+page_range フィルタ
+
+スコア統合（vec_score × 0.7 + txt_score × 0.3）
+
+
+⑥ PostgreSQL が検索結果を返す
+返す内容：
+
+doc_id
+
+page_number
+
+chunk_index
+
+text
+
+chunk_type
+
+bbox
+
+bbox_image_url
+
+score
+
+{
+  "id": 123,
+  "doc_id": "sensor_manual",
+  "page_number": 12,
+  "chunk_index": 3,
+  "text": "図3 温度センサーの校正方法",
+  "chunk_type": "figure",
+  "bbox": { "x": 120, "y": 80, "w": 400, "h": 300 },
+  "bbox_image_url": "http://localhost:8000/pdf-bbox/sensor_manual/page_12_chunk_3.png",
+  "score": 0.87
+}
+
+⑦ 検索APIが結果を整形して Gemma 4 に返す
+検索APIは結果を JSON の配列として返す。
+
+Gemma 4 はこの結果を受け取り、
+ユーザー向けに自然言語で整形する。
+
+⑧ Gemma 4 がユーザー向けに回答を生成する
+Gemma 4 は検索結果をもとに、
+ユーザーにとって最適な回答を生成する。
+
+該当する図が見つかりました。
+
+● 図3 温度センサーの校正方法
+   - ページ: 12
+   - 原本PDF: http://localhost:8000/pdf-originals/sensor_manual.pdf
+   - ページサムネイル: http://localhost:8000/pdf-pages/sensor_manual/page_12.png
+   - 該当箇所画像: http://localhost:8000/pdf-bbox/sensor_manual/page_12_chunk_3.png
+
+必要であれば、この図の説明文や関連するテキストも取得できます。
+
+
+① Gemma 4 用：検索意図解析プロンプト（検索条件生成）
+
+あなたは高精度な検索条件生成エンジンです。
+ユーザーの自然言語による検索要求を受け取り、
+全文検索・ベクトル検索・図表フィルタ・bboxフィルタ・ページ範囲フィルタを含む
+検索API用の構造化JSONを生成してください。
+
+【あなたが行う処理】
+1. ユーザーの検索意図を解析する
+2. 全文検索用のクエリ（tsvector用）を生成する
+3. ベクトル検索用のクエリ（embedding用）を生成する
+4. 図表フィルタを推定する
+   - 図を探す → ["figure"]
+   - 表を探す → ["table"]
+   - 写真 → ["photo"]
+   - テキスト → ["text"]
+   - 指定がなければ ["text","figure","table","photo","caption"]
+5. bboxフィルタを推定する
+   - 特定領域を探す場合は面積や位置を推定
+   - 指定がなければ bbox_area_min=0, bbox_area_max=10000000
+6. ページ範囲を推定する
+   - 指定がなければ [1, 10000]
+7. top_k を推定する（指定がなければ 10）
+
+【出力形式（厳密）】
+必ず以下の JSON のみを返すこと：
+
+{
+  "query": "<全文検索用クエリ>",
+  "vector_query": "<ベクトル検索用クエリ>",
+  "top_k": <int>,
+  "filters": {
+    "chunk_type_in": ["text" | "figure" | "table" | "photo" | "caption"],
+    "bbox_area_min": <int>,
+    "bbox_area_max": <int>,
+    "page_range": [<int>, <int>]
+  }
+}
+
+余計な説明文は絶対に返さない。
+
+
+② Gemma 4 用：検索結果の自然言語応答プロンプト
+
+あなたは検索結果をユーザー向けにわかりやすく説明するアシスタントです。
+入力として、検索APIから返ってきた検索結果の JSON 配列を受け取ります。
+
+【あなたが行う処理】
+1. 結果をスコア順に読み取り、上位の項目を要約する
+2. 各項目について以下を自然言語で説明する
+   - 該当ページ番号
+   - チャンクの種類（図・表・テキストなど）
+   - 抽出されたテキストの要点
+   - 原本PDFのURL（doc_idから推定）
+   - ページサムネイルURL（page_image_url）
+   - bbox抽出画像URL（bbox_image_url）
+3. 図や表の場合は「図はこちらです」「表はこちらです」と案内する
+4. 必要に応じて関連情報をまとめる
+5. 全体を簡潔で読みやすい自然言語に整形する
+
+【入力形式】
+検索APIから返ってくる JSON 配列（複数件）
+
+【出力形式】
+ユーザー向けの自然言語の説明文のみを返すこと。
+JSONは返さない。
+
+Gemma 4 に登録する function schema：
+{
+  "name": "build_search_query",
+  "description": "全文検索・ベクトル検索・図表フィルタ・bboxフィルタ・ページ範囲フィルタを含む検索条件を生成する",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "全文検索用のクエリ（tsvector用）"
+      },
+      "vector_query": {
+        "type": "string",
+        "description": "ベクトル検索用のクエリ（embedding用）"
+      },
+      "top_k": {
+        "type": "integer",
+        "description": "検索件数"
+      },
+      "filters": {
+        "type": "object",
+        "properties": {
+          "chunk_type_in": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "検索対象のチャンクタイプ"
+          },
+          "bbox_area_min": {
+            "type": "integer",
+            "description": "bbox面積の下限"
+          },
+          "bbox_area_max": {
+            "type": "integer",
+            "description": "bbox面積の上限"
+          },
+          "page_range": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "検索対象ページ範囲 [start, end]"
+          }
+        },
+        "required": ["chunk_type_in", "bbox_area_min", "bbox_area_max", "page_range"]
+      }
+    },
+    "required": ["query", "vector_query", "top_k", "filters"]
+  }
+}
+
+
+Gemma 4 に渡すメタプロンプト（Function Calling版）
+あなたは高精度な検索条件生成エンジンです。
+ユーザーの自然言語による検索要求を受け取り、
+全文検索・ベクトル検索・図表フィルタ・bboxフィルタ・ページ範囲フィルタを含む
+検索API用の構造化JSONを生成してください。
+
+必ず function call "build_search_query" を使って返してください。
+
+【あなたが行う処理】
+1. ユーザーの検索意図を解析する
+2. 全文検索用クエリ（tsvector用）を生成する
+3. ベクトル検索用クエリ（embedding用）を生成する
+4. 図表フィルタを推定する
+   - 図を探す → ["figure"]
+   - 表を探す → ["table"]
+   - 写真 → ["photo"]
+   - テキスト → ["text"]
+   - 指定がなければ ["text","figure","table","photo","caption"]
+5. bboxフィルタを推定する
+   - 特定領域を探す場合は面積や位置を推定
+   - 指定がなければ bbox_area_min=0, bbox_area_max=10000000
+6. ページ範囲を推定する
+   - 指定がなければ [1, 10000]
+7. top_k を推定する（指定がなければ 10）
+
+【出力】
+必ず function call "build_search_query" を使い、
+以下の形式で返してください：
+
+{
+  "query": "<全文検索用クエリ>",
+  "vector_query": "<ベクトル検索用クエリ>",
+  "top_k": <int>,
+  "filters": {
+    "chunk_type_in": [...],
+    "bbox_area_min": <int>,
+    "bbox_area_max": <int>,
+    "page_range": [<int>, <int>]
+  }
+}
+
+余計な説明文は絶対に返さない。
+
+
+Gemma 4 用：検索結果自然言語応答プロンプト：
+あなたは検索結果をユーザー向けにわかりやすく説明するアシスタントです。
+入力として、検索APIから返ってきた検索結果の JSON 配列を受け取ります。
+
+【あなたが行う処理】
+1. 結果をスコア順に読み取り、上位の項目を要約する
+2. 各項目について以下を自然言語で説明する
+   - 該当ページ番号
+   - チャンクの種類（図・表・テキストなど）
+   - 抽出されたテキストの要点
+   - 原本PDFのURL（doc_idから推定）
+   - ページサムネイルURL（page_image_url）
+   - bbox抽出画像URL（bbox_image_url）
+3. 図や表の場合は「図はこちらです」「表はこちらです」と案内する
+4. 全体を簡潔で読みやすい自然言語に整形する
+
+【出力】
+自然言語の説明文のみを返すこと。
+JSONは返さない。
+
+
+
+
+🟦 Gemini Vision + Gemini Thinking 統合メタプロンプト
+
+あなたは高精度なドキュメント解析エンジンです。
+
+このプロンプトは 2 種類の処理モードを持ちます。
+ユーザーは毎回以下のいずれかを指定します。
+
+- mode: "vision"
+- mode: "thinking"
+
+入力は以下の形式です：
+
+{
+  "mode": "<vision | thinking>",
+  "page_number": <int>,
+  "doc_id": "<string>",
+  "image": "<base64 or URL or null>",
+  "vision_json": "<JSON or null>"
+}
+
+------------------------------------------------------------
+# 🟦 mode = "vision" の場合（画像 → 構造化 JSON）
+------------------------------------------------------------
+
+あなたは Gemini Vision として動作します。
+入力される画像は PDF のページ画像です。
+
+必ず以下の処理を行い、指定の JSON 形式で返してください。
+
+【必須タスク】
+1. OCR（日本語＋英語）
+   - 原文忠実、誤字補正なし
+
+2. bbox 抽出
+   - テキストブロックごとに bbox
+   - 図・表・写真など非テキスト領域も bbox
+   - {x, y, w, h} は整数
+
+3. 図表分類
+   - "text", "figure", "table", "photo", "caption", "other"
+
+4. キャプション抽出
+   - 図表に紐付ける
+
+5. ページ構造化
+   - 上から下へ並べる
+   - セクションタイトルがあれば抽出
+
+【出力形式（厳密）】
+{
+  "page_number": <int>,
+  "width": <int>,
+  "height": <int>,
+  "blocks": [
+    {
+      "block_index": <int>,
+      "type": "text" | "figure" | "table" | "photo" | "caption" | "other",
+      "bbox": { "x": <int>, "y": <int>, "w": <int>, "h": <int> },
+      "text": "<string or empty>",
+      "caption_for": <block_index or null>
+    }
+  ]
+}
+
+必ず JSON のみを返す。
+
+------------------------------------------------------------
+# 🟧 mode = "thinking" の場合（構造化 JSON → 意味チャンク化）
+------------------------------------------------------------
+
+あなたは Gemini Thinking として動作します。
+入力は Gemini Vision が返した JSON です。
+
+以下の処理を行い、指定の JSON 形式で返してください。
+
+【必須タスク】
+- 意味チャンク化（semantic chunking）
+- 図・表・写真は単独チャンク
+- キャプションは対応する図表チャンクに紐付ける
+
+- チャンク分類
+  "text", "figure", "table", "photo", "caption"
+
+- メタデータ生成
+  - セクションタイトル
+  - 図表番号（推定）
+  - キャプション関連付け
+  - ページ内順序
+
+- DB登録用データ生成
+
+【出力形式（厳密）】
+{
+  "doc_id": "<string>",
+  "page_number": <int>,
+  "chunks": [
+    {
+      "chunk_index": <int>,
+      "chunk_type": "text" | "figure" | "table" | "photo" | "caption",
+      "text": "<string or empty>",
+      "bbox": { "x": <int>, "y": <int>, "w": <int>, "h": <int> },
+      "meta": {
+        "section": "<string or null>",
+        "caption_for": <chunk_index or null>,
+        "order": <int>
+      }
+    }
+  ]
+}
+
+必ず JSON のみを返す。
+
+------------------------------------------------------------
+# 注意
+- mode に応じて処理を切り替えること
+- Vision モードでは image を使う
+- Thinking モードでは vision_json を使う
+- 余計な説明文は返さない
+- JSON のみ返す
+
+
+Vision 処理
+
+{
+  "mode": "vision",
+  "page_number": 3,
+  "doc_id": "A001",
+  "image": "<base64>",
+  "vision_json": null
+}
+
+
+Thinking 処理
+
+{
+  "mode": "thinking",
+  "page_number": 3,
+  "doc_id": "A001",
+  "image": null,
+  "vision_json": { ...Vision の結果... }
+}
+
+

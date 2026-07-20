@@ -1,0 +1,193 @@
+# app.py
+from typing import List, Any, Tuple
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field, validator
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
+
+# =========================
+# 設定
+# =========================
+
+PG_CONN_INFO = os.getenv(
+  "PG_CONN_INFO",
+  "dbname=yourdb user=youruser password=yourpass host=localhost port=5432"
+)
+
+# =========================
+# Pydantic モデル
+# =========================
+
+class Filters(BaseModel):
+  chunk_type_in: List[str] = Field(..., description="検索対象のチャンクタイプ")
+  bbox_area_min: int = Field(..., ge=0)
+  bbox_area_max: int = Field(..., ge=0)
+  page_range: List[int] = Field(..., min_items=2, max_items=2)
+
+  @validator("page_range")
+  def validate_page_range(cls, v):
+    if len(v) != 2 or v[0] > v[1]:
+      raise ValueError("page_range は [start, end] で start <= end である必要があります")
+    return v
+
+class SearchQuery(BaseModel):
+  query: str = Field(..., description="全文検索用クエリ（tsvector用）")
+  vector_query: str = Field(..., description="ベクトル検索用クエリ（embedding用）")
+  top_k: int = Field(..., gt=0, le=100)
+  filters: Filters
+
+# =========================
+# DB ヘルパ
+# =========================
+
+def get_pg_conn():
+  return psycopg2.connect(PG_CONN_INFO)
+
+# =========================
+# embedding
+# =========================
+
+import httpx
+
+def embed_text(text: str) -> List[float]:
+  """
+  Ollama の Jina Embeddings v3 (GGUF) を httpx で呼び出す
+  """
+  try:
+    with httpx.Client(timeout=10.0) as client:
+      resp = client.post(
+        "http://localhost:11434/api/embeddings",
+        json={
+          "model": "jina-embeddings-v3-Q4_K_M",
+          "prompt": text
+        }
+      )
+
+    data = resp.json()
+
+    if "embedding" not in data:
+      raise ValueError(f"Ollama embedding API が不正レスポンス: {data}")
+
+    return data["embedding"]
+
+  except Exception as e:
+    print(f"[WARN] embedding 生成失敗: {e}")
+    return [0.0] * 768
+
+
+# =========================
+# SQL 生成
+# =========================
+
+def build_sql_from_query(q: SearchQuery) -> Tuple[str, List[Any]]:
+  allowed_types = {"text", "figure", "table", "photo", "caption"}
+  for t in q.filters.chunk_type_in:
+    if t not in allowed_types:
+      raise ValueError(f"未対応の chunk_type: {t}")
+
+  q_emb = embed_text(q.vector_query)
+  ts_query = q.query
+
+  score_expr = """
+    (0.7 * (embedding <-> %s) +
+     0.3 * ts_rank(text_tsv, plainto_tsquery(%s)))
+  """
+
+  sql = f"""
+    SELECT
+      id,
+      doc_id,
+      page_number,
+      chunk_index,
+      text,
+      chunk_type,
+      bbox,
+      bbox_image_url,
+      {score_expr} AS score
+    FROM pdf_chunks
+    WHERE
+      text_tsv @@ plainto_tsquery(%s)
+      AND chunk_type = ANY(%s)
+      AND ((bbox->>'w')::int * (bbox->>'h')::int)
+          BETWEEN %s AND %s
+      AND page_number BETWEEN %s AND %s
+    ORDER BY score ASC
+    LIMIT %s;
+  """
+
+  params: List[Any] = [
+    q_emb,
+    ts_query,
+    ts_query,
+    q.filters.chunk_type_in,
+    q.filters.bbox_area_min,
+    q.filters.bbox_area_max,
+    q.filters.page_range[0],
+    q.filters.page_range[1],
+    q.top_k
+  ]
+
+  return sql, params
+
+# =========================
+# FastAPI
+# =========================
+
+app = FastAPI(title="PDF Chunk Search API")
+
+# =========================
+# エンドポイント
+# =========================
+
+@app.post("/search")
+def search_chunks(q: SearchQuery):
+  unsupported_keywords = ["色", "線", "形", "人物", "顔", "赤い", "青い"]
+  if any(k in q.query for k in unsupported_keywords):
+    raise HTTPException(
+      status_code=400,
+      detail={
+        "message": "画像内容の詳細検索には対応していません",
+        "unsupported_keywords": unsupported_keywords
+      }
+    )
+
+  try:
+    sql, params = build_sql_from_query(q)
+  except ValueError as ve:
+    raise HTTPException(
+      status_code=400,
+      detail={
+        "message": "検索条件が不正です",
+        "error": str(ve)
+      }
+    )
+  except Exception as e:
+    raise HTTPException(
+      status_code=500,
+      detail={
+        "message": "SQL生成に失敗しました",
+        "error": str(e)
+      }
+    )
+
+  try:
+    conn = get_pg_conn()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute(sql, params)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+  except Exception as e:
+    raise HTTPException(
+      status_code=500,
+      detail={
+        "message": "検索実行に失敗しました",
+        "error": str(e)
+      }
+    )
+
+  return {
+    "count": len(rows),
+    "results": rows
+  }
