@@ -2,6 +2,7 @@
   become: yes
   roles:
     - common # OS 基本設定
+    - ollama
     - node # Node.js / nvm
     - share
     - php # PHP-FPM + php.ini

@@ -1,0 +1,38 @@
+---
+- name: Find application directories under files/sql (local)
+  find:
+    paths: "{{ role_path }}/files/sql"
+    file_type: directory
+    depth: 1
+  register: sql_dirs
+  delegate_to: localhost
+  run_once: true
+
+- name: Create PostgreSQL databases
+  become: yes
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    name: "{{ item.path | basename }}"
+    state: present
+  loop: "{{ sql_dirs.files }}"
+
+- name: Find SQL files for each DB
+  find:
+    paths: "{{ role_path }}/files/sql/{{ item.path | basename }}"
+    patterns: "*.sql"
+    file_type: file
+  register: sql_files
+  loop: "{{ sql_dirs.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Execute SQL files in order
+  become: yes
+  become_user: postgres
+  command: >
+    psql -d {{ item.0.path | basename }} -f {{ item.1.path }}
+  loop: "{{ sql_files.results | subelements('files') }}"
+  loop_control:
+    label: "{{ item.1.path }}"

@@ -1,0 +1,5 @@
+qdrant_user: qdrant
+qdrant_host: 0.0.0.0
+qdrant_port: 6333
+qdrant_storage_path: /var/lib/qdrant
+qdrant_log_path: /var/log/qdrant

@@ -1,0 +1,217 @@
+CREATE TABLE files (
+  id SERIAL PRIMARY KEY,
+  filename TEXT,
+  mime TEXT,
+  category TEXT,
+  department TEXT,
+  uploaded_at TIMESTAMP DEFAULT NOW(),
+  hash TEXT UNIQUE,
+  path TEXT NOT NULL
+);
+
+CREATE TABLE images (
+  id SERIAL PRIMARY KEY,
+  file_id INTEGER REFERENCES files(id) ON DELETE CASCADE,
+  page INTEGER,
+  image_type TEXT,
+  objects TEXT[],
+  caption TEXT,
+  path TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE chunks (
+  id SERIAL PRIMARY KEY,
+  file_id INTEGER REFERENCES files(id) ON DELETE CASCADE,
+  chunk_index INTEGER,
+  page INTEGER,
+  text TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+import os
+import json
+import subprocess
+from pdf2image import convert_from_path
+import psycopg
+from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct
+from jina_embeddings import JinaEmbeddings
+
+# -----------------------------
+# 設定
+# -----------------------------
+PG_CONN = psycopg.connect(
+    dbname="ragdb",
+    user="rag",
+    password="ragpass",
+    host="localhost",
+    port=5432
+)
+
+qdrant = QdrantClient(url="http://localhost:6333")
+
+# Jina v3（テキスト埋め込み）
+emb_text = JinaEmbeddings(model_name="jina-embeddings-v3")
+
+FLORENCE_CLI = "/usr/local/bin/florence2-cli"
+YOVO_CLI = "/usr/local/bin/yovo-cli"
+
+# -----------------------------
+# PDF → 画像抽出（pdf2image）
+# -----------------------------
+def extract_images_from_pdf(pdf_path, out_dir):
+    os.makedirs(out_dir, exist_ok=True)
+    pages = convert_from_path(pdf_path, dpi=200)
+    extracted = []
+
+    for idx, page in enumerate(pages):
+        out_path = f"{out_dir}/page_{idx}.png"
+        page.save(out_path, "PNG")
+        extracted.append((idx, out_path))
+
+    return extracted
+
+# -----------------------------
+# Florence2（画像分類）
+# -----------------------------
+def florence2_analyze(image_path):
+    result = subprocess.check_output([FLORENCE_CLI, "classify", image_path])
+    return json.loads(result)
+
+# -----------------------------
+# YOVO（画像ベクトル）
+# -----------------------------
+def yovo_embed(image_path):
+    result = subprocess.check_output([YOVO_CLI, "embed", image_path])
+    return json.loads(result)["vector"]
+
+# -----------------------------
+# テキスト抽出（pdftotext）
+# -----------------------------
+def extract_text(pdf_path):
+    result = subprocess.check_output(["pdftotext", pdf_path, "-"])
+    return result.decode("utf-8")
+
+# -----------------------------
+# チャンク化
+# -----------------------------
+def chunk_text(text, size=800):
+    return [text[i:i+size] for i in range(0, len(text), size)]
+
+# -----------------------------
+# インデックス作成
+# -----------------------------
+def index_document(file_path, category, department):
+    filename = os.path.basename(file_path)
+
+    # PostgreSQL: files 登録
+    with PG_CONN.cursor() as cur:
+        cur.execute("""
+            INSERT INTO files (filename, mime, category, department, path)
+            VALUES (%s, %s, %s, %s, %s) RETURNING id
+        """, (filename, "application/pdf", category, department, file_path))
+        file_id = cur.fetchone()[0]
+        PG_CONN.commit()
+
+    # -----------------------------
+    # PDF → 画像抽出
+    # -----------------------------
+    img_dir = f"/tmp/extracted_{file_id}"
+    images = extract_images_from_pdf(file_path, img_dir)
+
+    # -----------------------------
+    # 画像インデックス
+    # -----------------------------
+    qdrant_points = []
+    pg_image_rows = []
+
+    for page, img_path in images:
+        # Florence2 → 意味理解
+        meta = florence2_analyze(img_path)
+
+        # YOVO → ベクトル
+        vector = yovo_embed(img_path)
+
+        pg_image_rows.append((
+            file_id,
+            page,
+            meta.get("type"),
+            meta.get("objects"),
+            meta.get("caption"),
+            img_path
+        ))
+
+        qdrant_points.append(
+            PointStruct(
+                id=f"img_{file_id}_{page}",
+                vector=vector,
+                payload={
+                    "file_id": file_id,
+                    "type": "image",
+                    "page": page,
+                    "image_type": meta.get("type"),
+                    "objects": meta.get("objects"),
+                    "caption": meta.get("caption")
+                }
+            )
+        )
+
+    with PG_CONN.cursor() as cur:
+        cur.executemany("""
+            INSERT INTO images (file_id, page, image_type, objects, caption, path)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, pg_image_rows)
+        PG_CONN.commit()
+
+    qdrant.upsert(collection_name="asao_docs", points=qdrant_points)
+
+    # -----------------------------
+    # テキスト抽出
+    # -----------------------------
+    text_all = extract_text(file_path)
+    chunks = chunk_text(text_all)
+
+    # -----------------------------
+    # テキストインデックス（Jina v3）
+    # -----------------------------
+    qdrant_text_points = []
+    pg_chunk_rows = []
+
+    for idx, chunk in enumerate(chunks):
+        vector = emb_text.encode(chunk).tolist()
+
+        pg_chunk_rows.append((file_id, idx, None, chunk))
+
+        qdrant_text_points.append(
+            PointStruct(
+                id=f"text_{file_id}_{idx}",
+                vector=vector,
+                payload={
+                    "file_id": file_id,
+                    "type": "text",
+                    "chunk_index": idx,
+                    "text": chunk
+                }
+            )
+        )
+
+    with PG_CONN.cursor() as cur:
+        cur.executemany("""
+            INSERT INTO chunks (file_id, chunk_index, page, text)
+            VALUES (%s, %s, %s, %s)
+        """, pg_chunk_rows)
+        PG_CONN.commit()
+
+    qdrant.upsert(collection_name="asao_docs", points=qdrant_text_points)
+
+    print(f"Indexed file_id={file_id}")
+
+# -----------------------------
+# 実行例
+# -----------------------------
+index_document(
+    "/data/docs/sample.pdf",
+    category="仕様書",
+    department="開発部"
+)

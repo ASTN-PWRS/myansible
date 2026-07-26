@@ -1,41 +1,8 @@
-- name: Ensure ollama directory exists
-  become: yes
-  file:
-    path: "{{ ollama_dir }}"
-    state: directory
-    mode: "0755"
+---
+- name: Install ollama
+  import_tasks: install.yml
+  tags: [install, ollama]
 
-- name: Download ollama-linux-amd64.tar.zst
-  become: yes
-  get_url:
-    url: "{{ dl_url }}"
-    dest: "{{ ollama_dir }}/ollama-linux-amd64.tar.zst"
-    mode: "0644"
-    force: yes
-
-- name: Decompress tar.zst
-  become: yes
-  shell: |
-    zstd -d "{{ ollama_dir }}/ollama-linux-amd64.tar.zst" -o "{{ ollama_dir }}/ollama-linux-amd64.tar"
-  args:
-    creates: "{{ ollama_dir }}/ollama-linux-amd64.tar"
-
-- name: Extract tar archive
-  become: yes
-  shell: |
-    tar -xf "{{ ollama_dir }}/ollama-linux-amd64.tar" -C "{{ ollama_dir }}"
-  args:
-    creates: "{{ ollama_dir }}/bin/ollama"
-
-- name: Ensure ollama binary is executable by all users
-  become: yes
-  file:
-    path: "{{ ollama_dir }}/bin/ollama"
-    mode: "0755"
-
-- name: Link ollama binary to /usr/local/bin
-  become: yes
-  file:
-    src: "{{ ollama_dir }}/bin/ollama"
-    dest: "/usr/local/bin/ollama"
-    state: link
+- name: Install llama3.1
+  import_tasks: llama3.1.yml
+  tags: [install, ollama]

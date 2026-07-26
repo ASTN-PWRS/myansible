@@ -2,9 +2,10 @@
   become: yes
   roles:
     - share-packages
-    - message-server
-    - siglip2
-    - yolov8x-seg
+    - florence2
+    # - siglip2
+    # - message-server
+    # - yolov8x-seg
     # - paddleocr-cli
     # - ocr
     # - ocr-worker

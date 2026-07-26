@@ -1,2 +1,3 @@
-dl_url: "https://example.com/ollama-linux-amd64.tar.zst"
+ollama_user: asao
+dl_url: "https://github.com/ollama/ollama/releases/ollama-linux-amd64.tar.gz"
 ollama_dir: "/opt/ollama"

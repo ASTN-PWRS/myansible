@@ -1,0 +1,67 @@
+---
+- name: Ensure qdrant user exists
+  ansible.builtin.user:
+    name: "{{ qdrant_user }}"
+    shell: /usr/sbin/nologin
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ qdrant_user }}"
+    group: "{{ qdrant_user }}"
+    mode: "0755"
+  loop:
+    - /var/lib/qdrant
+    - /var/log/qdrant
+    - /usr/local/bin/qdrant_tmp
+
+- name: Get latest Qdrant release info
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/qdrant/qdrant/releases/latest
+    return_content: yes
+  register: qdrant_release
+
+- name: Extract download URL for Linux x86_64 binary
+  set_fact:
+    qdrant_download_url: "{{ qdrant_release.json.assets
+      | selectattr('name', 'match', 'qdrant-x86_64-unknown-linux-gnu.tar.gz')
+      | map(attribute='browser_download_url')
+      | first }}"
+
+- name: Download latest Qdrant binary
+  ansible.builtin.get_url:
+    url: "{{ qdrant_download_url }}"
+    dest: /usr/local/bin/qdrant_tmp/qdrant.tar.gz
+    mode: "0644"
+
+- name: Extract Qdrant binary
+  ansible.builtin.unarchive:
+    src: /usr/local/bin/qdrant_tmp/qdrant.tar.gz
+    dest: /usr/local/bin/
+    remote_src: yes
+
+- name: Ensure qdrant binary is executable
+  ansible.builtin.file:
+    path: /usr/local/bin/qdrant
+    mode: "0755"
+
+- name: Install systemd service
+  ansible.builtin.template:
+    src: qdrant.service.j2
+    dest: /etc/systemd/system/qdrant.service
+    mode: "0644"
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Enable qdrant service
+  ansible.builtin.systemd:
+    name: qdrant
+    enabled: yes
+
+- name: Start qdrant service
+  ansible.builtin.systemd:
+    name: qdrant
+    state: started

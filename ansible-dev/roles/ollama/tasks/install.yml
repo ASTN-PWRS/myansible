@@ -1,0 +1,83 @@
+- name: Ensure ollama directory exists
+  become: yes
+  file:
+    path: "{{ ollama_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Ensure zstd is installed
+  become: yes
+  apt:
+    name: zstd
+    state: present
+    update_cache: yes
+
+- name: Get latest Ollama release info
+  uri:
+    url: https://api.github.com/repos/ollama/ollama/releases/latest
+    return_content: yes
+  register: ollama_release
+
+- name: Select correct asset (normal amd64)
+  set_fact:
+    ollama_asset: >-
+      {{ ollama_release.json.assets
+         | selectattr('name', 'equalto', 'ollama-linux-amd64.tar.zst')
+         | map(attribute='browser_download_url')
+         | first }}
+
+- name: Download Ollama archive
+  become: yes
+  get_url:
+    url: "{{ ollama_asset }}"
+    dest: "{{ ollama_dir }}/ollama.tar.zst"
+    mode: "0644"
+    force: yes
+
+- name: Decompress tar.zst
+  become: yes
+  shell: |
+    zstd -d "{{ ollama_dir }}/ollama.tar.zst" -o "{{ ollama_dir }}/ollama.tar"
+  args:
+    creates: "{{ ollama_dir }}/ollama.tar"
+
+- name: Extract tar archive
+  become: yes
+  unarchive:
+    src: "{{ ollama_dir }}/ollama.tar"
+    dest: "{{ ollama_dir }}"
+    remote_src: yes
+  args:
+    creates: "{{ ollama_dir }}/bin/ollama"
+
+- name: Link ollama binary to /usr/local/bin
+  become: yes
+  file:
+    src: "{{ ollama_dir }}/bin/ollama"
+    dest: "/usr/local/bin/ollama"
+    state: link
+
+- name: Ensure ollama binary is executable by users
+  become: yes
+  file:
+    path: "/usr/local/bin/ollama"
+    mode: "0755"
+
+- name: Install ollama systemd service
+  become: yes
+  template:
+    src: ollama.service.j2
+    dest: /etc/systemd/system/ollama.service
+    mode: "0644"
+
+- name: Reload systemd
+  become: yes
+  systemd:
+    daemon_reload: yes
+
+- name: Ensure ollama service is running
+  become: yes
+  systemd:
+    name: ollama
+    state: started
+    enabled: yes

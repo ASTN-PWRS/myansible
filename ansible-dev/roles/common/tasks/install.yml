@@ -1,0 +1,68 @@
+# 1. base packages（変更なし）
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - git
+      - zstd
+      - unzip
+      - curl
+      - software-properties-common
+    state: present
+  become: true
+
+# 2. package_facts（変更なし）
+- name: Gather package facts
+  ansible.builtin.package_facts:
+
+# 3. landscape-client（変更なし）
+- name: Disable landscape-client service if installed
+  ansible.builtin.systemd:
+    name: landscape-client
+    enabled: false
+    state: stopped
+  when:
+    - ansible_facts.service_mgr == "systemd"
+    - "'landscape-client' in ansible_facts.packages"
+  become: true
+  ignore_errors: true
+
+- name: Remove landscape-client package if installed
+  ansible.builtin.apt:
+    name: landscape-client
+    state: absent
+    purge: true
+    autoremove: true
+  when: "'landscape-client' in ansible_facts.packages"
+  become: true
+
+# 6. service_facts（変更なし）
+- name: Gather service facts
+  ansible.builtin.service_facts:
+  when: ansible_facts.service_mgr == "systemd"
+
+# 7. 不要サービス disable（OR 条件を安全化）
+- name: Disable unnecessary services for WSL (safe)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - snapd
+    - snapd.socket
+    - ModemManager
+    - bluetooth
+  when:
+    - ansible_facts.service_mgr == "systemd"
+    - (item in ansible_facts.services) or (item + ".service" in ansible_facts.services)
+  ignore_errors: true
+
+# 8. networkd-wait-online（変更なし）
+- name: Disable and stop systemd-networkd-wait-online (safe)
+  ansible.builtin.systemd:
+    name: systemd-networkd-wait-online.service
+    enabled: false
+    state: stopped
+  become: true
+  when:
+    - ansible_facts.service_mgr == "systemd"
+    - "'systemd-networkd-wait-online.service' in ansible_facts.services"

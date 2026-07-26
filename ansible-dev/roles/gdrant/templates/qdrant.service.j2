@@ -1,0 +1,25 @@
+[Unit]
+Description=Qdrant Vector Database Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/qdrant \
+    --service.host {{ qdrant_host }} \
+    --service.http_port {{ qdrant_port }} \
+    --storage-path {{ qdrant_storage_path }} \
+    --log-level INFO
+Restart=always
+RestartSec=5
+
+User={{ qdrant_user }}
+Group={{ qdrant_user }}
+
+WorkingDirectory={{ qdrant_storage_path }}
+
+StandardOutput=append:{{ qdrant_log_path }}/qdrant.log
+StandardError=append:{{ qdrant_log_path }}/qdrant.err
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
