@@ -1,0 +1,7 @@
+---
+- name: Install SigLIP2 model
+  ansible.builtin.import_tasks: model.yml
+  tags: [SigLIP2, install]
+- name: Build SigLIP2 cli
+  ansible.builtin.import_tasks: build.yml
+  tags: [SigLIP2, install]

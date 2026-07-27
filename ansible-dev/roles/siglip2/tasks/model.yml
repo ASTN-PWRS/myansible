@@ -1,0 +1,21 @@
+- name: Create venv for SigLIP2
+  command: python3 -m venv /opt/siglip2-venv
+
+- name: Install SigLIP2 dependencies
+  command: >
+    /opt/siglip2-venv/bin/pip install
+    torch
+    transformers
+    pillow
+
+- name: Download SigLIP2 model to local cache
+  shell: |
+    /opt/siglip2-venv/bin/python - << 'EOF'
+    from transformers import AutoModel, AutoProcessor
+    MODEL_ID = "google/siglip2-base-patch16-224"
+    SAVE_DIR = "/opt/models/siglip2"
+    model = AutoModel.from_pretrained(MODEL_ID)
+    processor = AutoProcessor.from_pretrained(MODEL_ID)
+    model.save_pretrained(SAVE_DIR)
+    processor.save_pretrained(SAVE_DIR)
+    EOF

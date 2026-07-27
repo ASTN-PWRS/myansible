@@ -1,0 +1,10 @@
+[project]
+name = "sigclip2-cli"
+version = "0.1.0"
+description = "SigCLIP2 CLI wrapper"
+requires-python = ">=3.12"
+
+dependencies = []
+
+[project.scripts]
+sigclip2-cli = "sigclip2-cli.cli:main"

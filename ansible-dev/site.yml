@@ -3,6 +3,7 @@
   roles:
     - common # OS 基本設定
     - ollama
+    - siglip2
     - node # Node.js / nvm
     - share
     - php # PHP-FPM + php.ini
