@@ -1,0 +1,66 @@
+const systemPrompt = fs.readFileSync("./weaviate_system_prompt.txt", "utf8");
+
+async function buildWeaviateQuery(userQuery, mode, llm) {
+  const res = await llm.chat([
+    { role: "system", content: systemPrompt },
+    { role: "user", content: `検索モード: ${mode}\n質問: ${userQuery}` }
+  ]);
+
+  return res.content; // hybrid/bm25/vector + where句 が返る
+}
+
+function buildGraphQLQueryFromLLM(llmQuery) {
+  return `
+    {
+      Get {
+        Block(
+          ${llmQuery}
+        ) {
+          id
+          doc_id
+          page_number
+          block_index
+          type
+          text
+          ocr_text
+          caption
+          cells_text
+          bbox
+          image_base64
+          _additional {
+            score
+          }
+        }
+      }
+    }
+  `;
+}
+
+async function executeWeaviateQuery(graphqlQuery) {
+  const res = await fetch("http://localhost:8080/v1/graphql", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: graphqlQuery })
+  });
+
+  const json = await res.json();
+  return json;
+}
+
+
+async function searchWeaviate(userQuery, mode, llm) {
+  // ① LLM に検索句を生成させる
+  const llmQuery = await buildWeaviateQuery(userQuery, mode, llm);
+
+  console.log("LLM検索句:\n", llmQuery);
+
+  // ② GraphQL クエリに埋め込む
+  const graphqlQuery = buildGraphQLQueryFromLLM(llmQuery);
+
+  console.log("GraphQLクエリ:\n", graphqlQuery);
+
+  // ③ Weaviate に実行
+  const result = await executeWeaviateQuery(graphqlQuery);
+
+  return result;
+}

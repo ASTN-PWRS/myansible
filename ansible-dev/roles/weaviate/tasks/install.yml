@@ -1,0 +1,42 @@
+- name: Ensure dependencies
+  apt:
+    name: [curl, unzip]
+    state: present
+    update_cache: yes
+
+- name: Create weaviate user
+  user:
+    name: weaviate
+    system: yes
+    shell: /usr/sbin/nologin
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: weaviate
+    group: weaviate
+  loop:
+    - /opt/weaviate
+    - /var/lib/weaviate
+
+- name: Download Weaviate binary
+  get_url:
+    url: https://github.com/weaviate/weaviate/releases/latest/download/weaviate-linux-amd64
+    dest: /opt/weaviate/weaviate
+    mode: "0755"
+
+- name: Install systemd unit
+  template:
+    src: weaviate.service.j2
+    dest: /etc/systemd/system/weaviate.service
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable & start Weaviate
+  systemd:
+    name: weaviate
+    enabled: yes
+    state: started

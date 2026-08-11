@@ -1,0 +1,55 @@
+{
+  "classes": [
+    {
+      "class": "Document",
+      "description": "PDF 全体のメタ情報",
+      "vectorizer": "none",
+      "properties": [
+        { "name": "doc_id", "dataType": ["text"] },
+        { "name": "title", "dataType": ["text"] },
+        { "name": "source", "dataType": ["text"] },
+        { "name": "page_count", "dataType": ["int"] },
+        { "name": "created_at", "dataType": ["date"] },
+        { "name": "tags", "dataType": ["text[]"] }
+      ]
+    },
+
+    {
+      "class": "Page",
+      "description": "PDF のページ単位の情報",
+      "vectorizer": "none",
+      "properties": [
+        { "name": "doc_id", "dataType": ["text"] },
+        { "name": "page_number", "dataType": ["int"] },
+        { "name": "width", "dataType": ["int"] },
+        { "name": "height", "dataType": ["int"] }
+      ]
+    },
+
+    {
+      "class": "Block",
+      "description": "ページ内のテキスト・図・表・写真の抽出結果",
+      "vectorizer": "none",
+      "properties": [
+        { "name": "doc_id", "dataType": ["text"] },
+        { "name": "page_number", "dataType": ["int"] },
+        { "name": "block_index", "dataType": ["int"] },
+
+        { "name": "type", "dataType": ["text"] }, 
+        /* text | table | figure | image */
+
+        { "name": "text", "dataType": ["text"] },
+        { "name": "ocr_text", "dataType": ["text"] },
+        { "name": "caption", "dataType": ["text"] },
+        { "name": "cells_text", "dataType": ["text"] },
+
+        { "name": "bbox", "dataType": ["text"] }, 
+        /* [x0,y0,x1,y1] を JSON文字列で保存 */
+
+        { "name": "image_base64", "dataType": ["text"] },
+
+        { "name": "notes", "dataType": ["text"] }
+      ]
+    }
+  ]
+}

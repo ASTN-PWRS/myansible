@@ -1,0 +1,4 @@
+- name: Setting firewall
+  import_tasks: ufw.yml
+- name: Install waeviate
+  import_tasks: install.yml

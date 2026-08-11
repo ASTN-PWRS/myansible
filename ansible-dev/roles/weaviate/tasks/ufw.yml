@@ -1,0 +1,16 @@
+- name: Ensure UFW is installed
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+
+- name: Allow Weaviate port
+  ufw:
+    rule: allow
+    port: "{{ weaviate_port }}"
+    proto: tcp
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    policy: allow
