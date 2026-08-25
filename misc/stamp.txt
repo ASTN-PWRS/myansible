@@ -1,0 +1,24 @@
+{
+  "class": "Stamp",
+  "properties": [
+    { "name": "stamp_id", "dataType": ["text"] },
+    { "name": "name", "dataType": ["text"] },
+
+    { "name": "stamp_field1", "dataType": ["text"] },
+    { "name": "stamp_field1_bbox", "dataType": ["text"] },
+    { "name": "stamp_field_type1", "dataType": ["text"] },
+
+    { "name": "stamp_field2", "dataType": ["text"] },
+    { "name": "stamp_field2_bbox", "dataType": ["text"] },
+    { "name": "stamp_field_type2", "dataType": ["text"] },
+
+    { "name": "stamp_field3", "dataType": ["text"] },
+    { "name": "stamp_field3_bbox", "dataType": ["text"] },
+    { "name": "stamp_field_type3", "dataType": ["text"] },
+
+    { "name": "stamp_layout", "dataType": ["text"] },
+    { "name": "stamp_shape", "dataType": ["text"] },
+    { "name": "image_path", "dataType": ["text"] },
+    { "name": "vector", "dataType": ["blob"] }
+  ]
+}
