@@ -1,0 +1,86 @@
+{
+  "class": "Documents",
+  "vectorizer": "none",
+  "properties": [
+    {
+      "name": "docId",
+      "dataType": ["text"]
+    },
+    {
+      "name": "title",
+      "dataType": ["text"]
+    },
+    {
+      "name": "category",
+      "dataType": ["text"]
+    },
+    {
+      "name": "fileUrl",
+      "dataType": ["text"]
+    },
+    {
+      "name": "filePath",
+      "dataType": ["text"]
+    },
+    {
+      "name": "metaInfo",
+      "dataType": ["object"]
+    },
+    {
+      "name": "pages",
+      "dataType": ["Pages[]"]
+    }
+  ]
+}
+
+metaInfo
+{
+  "author": "山田太郎",
+  "revision": "Rev.3",
+  "issue_date": "2024-05-10",
+  "summary": "Gemini による文書要約が入る",
+  "pageCount": 12
+}
+
+
+{
+  "class": "Pages",
+  "vectorizer": "none",
+  "properties": [
+    { "name": "pageNumber", "dataType": ["int"] },
+    { "name": "thumbnailUrl", "dataType": ["text"] },
+
+    { "name": "document", "dataType": ["Documents"] },
+    { "name": "parts", "dataType": ["Parts[]"] },
+
+    /* ページ全体の構造フラグ */
+    { "name": "hasStamp", "dataType": ["boolean"] },
+    { "name": "hasFlowchart", "dataType": ["boolean"] },
+    { "name": "hasTable", "dataType": ["boolean"] },
+    { "name": "hasFigure", "dataType": ["boolean"] },
+    { "name": "hasLogo", "dataType": ["boolean"] },
+    { "name": "hasForm", "dataType": ["boolean"] },
+
+    /* ページ全体の OCR */
+    { "name": "fullText", "dataType": ["text"] },
+
+    /* 詳細構造（Gemini の JSON をそのまま入れる） */
+    { "name": "stamps", "dataType": ["object[]"] },
+    { "name": "flowcharts", "dataType": ["object[]"] },
+    { "name": "tables", "dataType": ["object[]"] },
+    { "name": "logos", "dataType": ["object[]"] },
+    { "name": "forms", "dataType": ["object[]"] }
+  ]
+}
+
+{
+  "class": "Parts",
+  "vectorizer": "none",
+  "properties": [
+    { "name": "type", "dataType": ["text"] },        // stamp / flowchart / table / figure / text / photo / logo / form / other
+    { "name": "bbox", "dataType": ["number[]"] },
+    { "name": "embedding", "dataType": ["number[]"] },
+    { "name": "ocrText", "dataType": ["text"] },
+    { "name": "page", "dataType": ["Pages"] }
+  ]
+}
